@@ -1,0 +1,33 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "geolocalizacao",
+  "main": "cloudflare/worker.js",
+  "compatibility_date": "2026-07-22",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/",
+      "/login",
+      "/autenticar",
+      "/coletar",
+      "/respostas*",
+      "/atualizar*",
+      "/excluir*",
+      "/exportar_excel",
+      "/mapa",
+      "/service-worker.js",
+      "/static/service-worker.js"
+    ]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "geolocalizacao-db"
+    }
+  ],
+  "vars": {
+    "APP_VERSION": "20260722-pesquisa-opiniao",
+    "SENHA_SISTEMA": "Lucasph12345"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "geolocalizacao",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build-cloudflare.js",
+    "dev:cloudflare": "npm run build && wrangler dev",
+    "deploy:cloudflare": "npm run build && wrangler deploy"
+  }
+}
