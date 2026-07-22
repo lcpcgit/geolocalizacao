@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: pesquisa-opiniao
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn principal:app --host 0.0.0.0 --port $PORT
+    disk:
+      name: pesquisa-opiniao-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: DB_PATH
+        value: /var/data/dados.db
+      - key: SENHA_SISTEMA
+        sync: false

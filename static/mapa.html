@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa - Pesquisa de Opinião Pública</title>
+    <style>
+        body, html { height: 100%; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        #map { height: 100%; width: 100%; background-color: #e5e7eb; }
+        #painel-filtros {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 320px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.28);
+            z-index: 9999;
+            max-height: 85vh;
+            overflow-y: auto;
+            display: none;
+        }
+        .painel-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f766e; padding-bottom: 8px; margin-bottom: 10px; }
+        .painel-header h3 { margin: 0; color: #0f766e; font-size: 16px; }
+        .btn-fechar { background: #0f766e; color: white; border: none; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; font-weight: bold; }
+        h4 { margin: 12px 0 5px; font-size: 12px; color: #374151; text-transform: uppercase; border-left: 3px solid #0f766e; padding-left: 6px; }
+        label { display: block; margin-top: 8px; font-size: 12px; font-weight: bold; color: #1f2937; }
+        input, select { width: 100%; padding: 7px; margin-top: 2px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px; box-sizing: border-box; }
+        .btn-limpar { width: 100%; background: #6b7280; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer; margin-top: 15px; font-weight: bold; }
+        #controles-personalizados {
+            position: absolute;
+            bottom: 25px;
+            left: 10px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .btn-mapa {
+            background: #fff;
+            color: #374151;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            width: 170px;
+        }
+        .btn-mapa:hover { background: #f9fafb; }
+        .destaque { color: #0f766e; border-left: 4px solid #0f766e; }
+        @media (max-width: 700px) {
+            #painel-filtros { left: 10px; right: 10px; width: auto; }
+            #controles-personalizados { bottom: 15px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="controles-personalizados">
+        <button class="btn-mapa destaque" onclick="toggleFiltros()">Abrir filtros</button>
+        <a href="/exportar_excel" class="btn-mapa">Baixar Excel</a>
+        <a href="/static/index.html" class="btn-mapa">Voltar à pesquisa</a>
+    </div>
+
+    <div id="painel-filtros">
+        <div class="painel-header">
+            <h3>Filtros</h3>
+            <button class="btn-fechar" onclick="toggleFiltros()" title="Fechar">X</button>
+        </div>
+
+        <h4>Identificação</h4>
+        <label>Nome</label><input type="text" id="f_nome" oninput="filtrar()">
+        <label>Povoado/Bairro</label><input type="text" id="f_povoado" oninput="filtrar()">
+
+        <h4>Perfil</h4>
+        <label>Ocupação</label><input type="text" id="f_ocupacao" oninput="filtrar()">
+        <label>Religião</label><input type="text" id="f_religiao" oninput="filtrar()">
+
+        <h4>Avaliação</h4>
+        <label>Governo Lula</label>
+        <select id="f_lula" onchange="filtrar()">
+            <option value="">Todos</option><option value="Aprova">Aprova</option><option value="Não Aprova">Não Aprova</option><option value="Não Sabe">Não Sabe</option>
+        </select>
+        <label>Governo Brandão</label>
+        <select id="f_brandao" onchange="filtrar()">
+            <option value="">Todos</option><option value="Aprova">Aprova</option><option value="Não Aprova">Não Aprova</option><option value="Não Sabe">Não Sabe</option>
+        </select>
+
+        <h4>Intenção de voto</h4>
+        <label>Governador</label><input type="text" id="f_governador" oninput="filtrar()">
+        <label>Deputado estadual</label><input type="text" id="f_estadual" oninput="filtrar()">
+        <label>Deputado federal</label><input type="text" id="f_federal" oninput="filtrar()">
+
+        <h4>Prioridades</h4>
+        <label>Demanda</label>
+        <select id="f_demanda" onchange="filtrar()">
+            <option value="">Todas</option>
+            <option value="Água">Água</option>
+            <option value="Estrada">Estrada</option>
+            <option value="Escola">Escola</option>
+            <option value="Posto de Saúde">Posto de Saúde</option>
+            <option value="Praça">Praça</option>
+            <option value="Iluminação Pública">Iluminação Pública</option>
+        </select>
+
+        <button class="btn-limpar" onclick="limparFiltros()">Limpar filtros</button>
+        <div id="contador" style="text-align:center; margin-top:10px; font-size:12px; color:#6b7280;"></div>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCKY-q_wyT12fKP3L7FzQiZMjAy7Qer41E&callback=initMap&libraries=places&v=weekly" async defer></script>
+
+    <script>
+        let map;
+        let markers = [];
+        let infoWindow;
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: { lat: -4.0, lng: -44.0 },
+                zoom: 7,
+                mapTypeId: "hybrid",
+                streetViewControl: true,
+                fullscreenControl: true,
+                mapTypeControlOptions: { position: google.maps.ControlPosition.TOP_RIGHT }
+            });
+
+            infoWindow = new google.maps.InfoWindow();
+            const streetView = map.getStreetView();
+            google.maps.event.addListener(streetView, 'visible_changed', function() {
+                document.getElementById('controles-personalizados').style.display = streetView.getVisible() ? 'none' : 'flex';
+                if (streetView.getVisible()) document.getElementById('painel-filtros').style.display = 'none';
+            });
+
+            carregarDados();
+        }
+
+        function carregarDados() {
+            fetch("/respostas")
+                .then(r => {
+                    if (!r.ok) throw new Error("Erro ao carregar respostas");
+                    return r.json();
+                })
+                .then(dados => criarMarcadores(dados))
+                .catch(err => console.error(err));
+        }
+
+        function escapeHtml(valor) {
+            return String(valor ?? "")
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#039;");
+        }
+
+        function texto(valor) {
+            return String(valor ?? "").toLowerCase();
+        }
+
+        function criarMarcadores(lista) {
+            markers.forEach(m => m.setMap(null));
+            markers = [];
+            const bounds = new google.maps.LatLngBounds();
+
+            lista.forEach(item => {
+                if (item.latitude === null || item.longitude === null) return;
+
+                const identificacao = item.dados.identificacao || {};
+                const pesquisa = item.dados.pesquisa || {};
+                const demandas = Array.isArray(pesquisa.demandas_bairro_povoado) ? pesquisa.demandas_bairro_povoado : [];
+
+                const marker = new google.maps.Marker({
+                    position: { lat: item.latitude, lng: item.longitude },
+                    map: map,
+                    title: identificacao.nome || ""
+                });
+
+                const conteudo = `
+                    <div style="font-family: Arial, sans-serif; font-size: 13px; color:#1f2937; min-width: 220px;">
+                        <strong style="font-size: 15px; color: #0f766e;">${escapeHtml(identificacao.nome)}</strong><br>
+                        <span>${escapeHtml(identificacao.povoado_bairro)}</span>
+                        <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 7px 0;">
+                        <b>Governador:</b> ${escapeHtml(pesquisa.voto_governador)}<br>
+                        <b>Dep. estadual:</b> ${escapeHtml(pesquisa.voto_deputado_estadual)}<br>
+                        <b>Dep. federal:</b> ${escapeHtml(pesquisa.voto_deputado_federal)}<br>
+                        <b>Demandas:</b> ${escapeHtml(demandas.join(", "))}<br>
+                        <br>
+                        <a href="/respostas/${item.id}" target="_blank" style="display:block; text-align:center; background:#2563eb; color:white; padding:7px; text-decoration:none; border-radius:4px;">
+                            Abrir ficha
+                        </a>
+                    </div>
+                `;
+
+                marker.addListener("click", () => {
+                    infoWindow.setContent(conteudo);
+                    infoWindow.open(map, marker);
+                });
+
+                marker.dadosOriginais = item;
+                markers.push(marker);
+                bounds.extend(marker.getPosition());
+            });
+
+            if (markers.length > 0) map.fitBounds(bounds);
+            atualizarContador(markers.length);
+        }
+
+        function filtrar() {
+            const fNome = texto(document.getElementById('f_nome').value);
+            const fPovoado = texto(document.getElementById('f_povoado').value);
+            const fOcupacao = texto(document.getElementById('f_ocupacao').value);
+            const fReligiao = texto(document.getElementById('f_religiao').value);
+            const fLula = document.getElementById('f_lula').value;
+            const fBrandao = document.getElementById('f_brandao').value;
+            const fGovernador = texto(document.getElementById('f_governador').value);
+            const fEstadual = texto(document.getElementById('f_estadual').value);
+            const fFederal = texto(document.getElementById('f_federal').value);
+            const fDemanda = document.getElementById('f_demanda').value;
+
+            let visiveis = 0;
+            markers.forEach(marker => {
+                const dados = marker.dadosOriginais.dados || {};
+                const identificacao = dados.identificacao || {};
+                const pesquisa = dados.pesquisa || {};
+                const demandas = Array.isArray(pesquisa.demandas_bairro_povoado) ? pesquisa.demandas_bairro_povoado : [];
+
+                const aparece =
+                    (!fNome || texto(identificacao.nome).includes(fNome)) &&
+                    (!fPovoado || texto(identificacao.povoado_bairro).includes(fPovoado)) &&
+                    (!fOcupacao || texto(pesquisa.ocupacao).includes(fOcupacao)) &&
+                    (!fReligiao || texto(pesquisa.religiao).includes(fReligiao)) &&
+                    (!fLula || pesquisa.governo_lula === fLula) &&
+                    (!fBrandao || pesquisa.governo_brandao === fBrandao) &&
+                    (!fGovernador || texto(pesquisa.voto_governador).includes(fGovernador)) &&
+                    (!fEstadual || texto(pesquisa.voto_deputado_estadual).includes(fEstadual)) &&
+                    (!fFederal || texto(pesquisa.voto_deputado_federal).includes(fFederal)) &&
+                    (!fDemanda || demandas.includes(fDemanda));
+
+                marker.setMap(aparece ? map : null);
+                if (aparece) visiveis++;
+            });
+
+            atualizarContador(visiveis);
+        }
+
+        function atualizarContador(qtd) {
+            document.getElementById('contador').innerText = qtd + " encontrado(s)";
+        }
+
+        function toggleFiltros() {
+            const painel = document.getElementById('painel-filtros');
+            painel.style.display = (painel.style.display === 'none' || painel.style.display === '') ? 'block' : 'none';
+        }
+
+        function limparFiltros() {
+            document.querySelectorAll('#painel-filtros input').forEach(i => i.value = "");
+            document.querySelectorAll('#painel-filtros select').forEach(s => s.value = "");
+            filtrar();
+        }
+    </script>
+</body>
+</html>

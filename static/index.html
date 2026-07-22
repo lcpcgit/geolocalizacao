@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pesquisa de Opinião Pública</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            padding-bottom: 60px;
+            background: #f3f4f6;
+            color: #1f2937;
+        }
+        main {
+            max-width: 760px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 22px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        h1 { font-size: 24px; margin: 0 0 6px; color: #111827; }
+        h2 { font-size: 17px; margin: 26px 0 10px; color: #0f766e; border-bottom: 1px solid #d1d5db; padding-bottom: 6px; }
+        label { display: block; margin-top: 12px; font-weight: 700; }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 15px;
+            background: #fff;
+        }
+        .linha {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .hidden { display: none; }
+        .opcoes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 8px 12px;
+            margin-top: 8px;
+        }
+        .opcoes label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0;
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+        .opcoes input { width: auto; margin: 0; }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: #0f766e;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 17px;
+            font-weight: 700;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+        button:disabled { background: #9ca3af; cursor: not-allowed; }
+        .btn-sync { background: #2563eb; margin-bottom: 10px; }
+        #status-bar {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+            border-radius: 6px;
+            margin: 12px 0;
+            display: none;
+        }
+        .status-pendente { background: #facc15; color: #111827; display: block !important; }
+        .consentimento {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-top: 22px;
+            padding: 12px;
+            background: #f9fafb;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+        }
+        .consentimento input { width: auto; margin-top: 3px; }
+        .consentimento label { margin: 0; font-weight: 600; }
+        @media (max-width: 640px) {
+            body { padding: 12px; }
+            main { padding: 16px; }
+            .linha { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Pesquisa de Opinião Pública</h1>
+        <div id="status-bar"></div>
+        <button class="btn-sync" id="btn-sincronizar" onclick="sincronizar()">Sincronizar dados pendentes</button>
+
+        <h2>Identificação</h2>
+        <label>Qual o seu nome?</label>
+        <input type="text" id="nome" autocomplete="name">
+
+        <div class="linha">
+            <div>
+                <label>Telefone</label>
+                <input type="tel" id="telefone" autocomplete="tel">
+            </div>
+            <div>
+                <label>Povoado ou bairro</label>
+                <input type="text" id="povoado_bairro">
+            </div>
+        </div>
+
+        <div class="linha">
+            <div>
+                <label>Endereço / rua</label>
+                <input type="text" id="endereco_rua" autocomplete="street-address">
+            </div>
+            <div>
+                <label>Número</label>
+                <input type="text" id="numero">
+            </div>
+        </div>
+
+        <h2>Perfil</h2>
+        <label>1. Ocupação</label>
+        <select id="ocupacao">
+            <option value="">Selecione</option>
+            <option value="Efetivo da Prefeitura">Efetivo da Prefeitura</option>
+            <option value="Contratado Prefeitura">Contratado Prefeitura</option>
+            <option value="Funcionário Público Estadual/Federal">Funcionário Público Estadual/Federal</option>
+            <option value="Empregado Assalariado">Empregado Assalariado</option>
+            <option value="Trabalhador Autônomo">Trabalhador Autônomo</option>
+            <option value="Trabalhador Rural">Trabalhador Rural</option>
+        </select>
+
+        <label>2. Qual a sua religião?</label>
+        <select id="religiao">
+            <option value="">Selecione</option>
+            <option value="Católica">Católica</option>
+            <option value="Evangélica">Evangélica</option>
+            <option value="Espírita">Espírita</option>
+            <option value="Outra">Outra</option>
+            <option value="Nenhuma">Nenhuma</option>
+        </select>
+        <div id="religiao_outra_div" class="hidden">
+            <label>Especifique a religião</label>
+            <input type="text" id="religiao_outra">
+        </div>
+
+        <h2>Avaliação de Governo</h2>
+        <label>3. O que você acha do Governo Lula?</label>
+        <select id="governo_lula">
+            <option value="">Selecione</option>
+            <option value="Aprova">Aprova</option>
+            <option value="Não Aprova">Não Aprova</option>
+            <option value="Não Sabe">Não Sabe</option>
+        </select>
+
+        <label>4. O que você acha do Governo Brandão?</label>
+        <select id="governo_brandao">
+            <option value="">Selecione</option>
+            <option value="Aprova">Aprova</option>
+            <option value="Não Aprova">Não Aprova</option>
+            <option value="Não Sabe">Não Sabe</option>
+        </select>
+
+        <label>5. O que você acha do Governo de Dino Penha?</label>
+        <select id="governo_dino_penha">
+            <option value="">Selecione</option>
+            <option value="Aprova">Aprova</option>
+            <option value="Não Aprova">Não Aprova</option>
+            <option value="Não Sabe">Não Sabe</option>
+        </select>
+
+        <h2>Intenção de Voto</h2>
+        <label>6. Em quem você votaria para governador na próxima eleição?</label>
+        <select id="voto_governador">
+            <option value="">Selecione</option>
+            <option value="Camarão">Camarão</option>
+            <option value="Orleans Brandão">Orleans Brandão</option>
+            <option value="Braide">Braide</option>
+            <option value="Nenhum">Nenhum</option>
+        </select>
+
+        <label>7. Em quem você votaria para deputado estadual na próxima eleição?</label>
+        <select id="voto_deputado_estadual">
+            <option value="">Selecione</option>
+            <option value="Claudio Cunha">Claudio Cunha</option>
+            <option value="Detinha">Detinha</option>
+            <option value="Gleidson Rezende">Gleidson Rezende</option>
+            <option value="Segundo">Segundo</option>
+            <option value="Luanna Rezende">Luanna Rezende</option>
+            <option value="Tiago Fernandes">Tiago Fernandes</option>
+            <option value="Ivo Resende">Ivo Resende</option>
+            <option value="Leonardo Sá">Leonardo Sá</option>
+            <option value="Othelino Neto">Othelino Neto</option>
+            <option value="Outros">Outros</option>
+            <option value="Não Sabe">Não Sabe</option>
+        </select>
+        <div id="estadual_outro_div" class="hidden">
+            <label>Informe outro nome para deputado estadual</label>
+            <input type="text" id="voto_deputado_estadual_outro">
+        </div>
+
+        <label>8. Em quem você votaria para deputado federal na próxima eleição?</label>
+        <select id="voto_deputado_federal">
+            <option value="">Selecione</option>
+            <option value="Aldir Junior">Aldir Junior</option>
+            <option value="Junior Lourenço">Junior Lourenço</option>
+            <option value="Igor Paiva">Igor Paiva</option>
+            <option value="Fabio Macedo">Fabio Macedo</option>
+            <option value="Márcio Honaiser">Márcio Honaiser</option>
+            <option value="Vinicius Ferro">Vinicius Ferro</option>
+            <option value="Pedro Lucas">Pedro Lucas</option>
+            <option value="Outros">Outros</option>
+            <option value="Não Sabe">Não Sabe</option>
+        </select>
+        <div id="federal_outro_div" class="hidden">
+            <label>Informe outro nome para deputado federal</label>
+            <input type="text" id="voto_deputado_federal_outro">
+        </div>
+
+        <h2>Prioridades e Serviços</h2>
+        <label>9. O que o(a) senhor(a) espera que o(a) prefeito(a) faça no seu bairro/povoado?</label>
+        <div class="opcoes">
+            <label><input type="checkbox" name="demandas" value="Água"> Água</label>
+            <label><input type="checkbox" name="demandas" value="Estrada"> Estrada</label>
+            <label><input type="checkbox" name="demandas" value="Escola"> Escola</label>
+            <label><input type="checkbox" name="demandas" value="Posto de Saúde"> Posto de Saúde</label>
+            <label><input type="checkbox" name="demandas" value="Praça"> Praça</label>
+            <label><input type="checkbox" name="demandas" value="Iluminação Pública"> Iluminação Pública</label>
+        </div>
+
+        <label>10. Aprova ou não aprova o setor saúde do seu município?</label>
+        <select id="aprova_saude_municipio">
+            <option value="">Selecione</option>
+            <option value="Aprova">Aprova</option>
+            <option value="Não Aprova">Não Aprova</option>
+            <option value="Não Sabe">Não Sabe</option>
+        </select>
+
+        <label>11. Aprova ou não aprova o setor educação do seu município?</label>
+        <select id="aprova_educacao_municipio">
+            <option value="">Selecione</option>
+            <option value="Aprova">Aprova</option>
+            <option value="Não Aprova">Não Aprova</option>
+            <option value="Não Sabe">Não Sabe</option>
+        </select>
+
+        <label>12. Aprova ou não aprova o setor estradas do seu município?</label>
+        <select id="aprova_estradas_municipio">
+            <option value="">Selecione</option>
+            <option value="Aprova">Aprova</option>
+            <option value="Não Aprova">Não Aprova</option>
+            <option value="Não Sabe">Não Sabe</option>
+        </select>
+
+        <div class="consentimento">
+            <input type="checkbox" id="consentimento">
+            <label for="consentimento">Declaro que fui informado(a) sobre a coleta dos dados da pesquisa, incluindo localização, e autorizo o registro das respostas.</label>
+        </div>
+
+        <button id="btn-enviar" onclick="enviar()">Enviar dados</button>
+    </main>
+
+    <script>
+        let db = null;
+        const statusBar = document.getElementById('status-bar');
+        const DB_NAME = "pesquisa_eleitoral_db";
+        const STORE_NAME = "respostas";
+
+        const request = indexedDB.open(DB_NAME, 1);
+        request.onupgradeneeded = function (event) {
+            db = event.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
+            }
+        };
+        request.onsuccess = function (event) {
+            db = event.target.result;
+            verificarPendencias();
+        };
+        request.onerror = function () {
+            alert("Não foi possível abrir o armazenamento offline deste aparelho.");
+        };
+
+        function valor(id) {
+            return document.getElementById(id).value.trim();
+        }
+
+        function valorSelectComOutro(selectId, outroId) {
+            const selecionado = valor(selectId);
+            if (selecionado === "Outra" || selecionado === "Outros") {
+                return valor(outroId) || selecionado;
+            }
+            return selecionado;
+        }
+
+        function valoresMarcados(name) {
+            return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(input => input.value);
+        }
+
+        function toggleCampoOutro(selectId, divId) {
+            const selecionado = valor(selectId);
+            document.getElementById(divId).style.display = (selecionado === "Outra" || selecionado === "Outros") ? "block" : "none";
+        }
+
+        document.getElementById('religiao').addEventListener('change', () => toggleCampoOutro('religiao', 'religiao_outra_div'));
+        document.getElementById('voto_deputado_estadual').addEventListener('change', () => toggleCampoOutro('voto_deputado_estadual', 'estadual_outro_div'));
+        document.getElementById('voto_deputado_federal').addEventListener('change', () => toggleCampoOutro('voto_deputado_federal', 'federal_outro_div'));
+
+        function montarDados() {
+            return {
+                identificacao: {
+                    nome: valor('nome'),
+                    telefone: valor('telefone'),
+                    povoado_bairro: valor('povoado_bairro'),
+                    endereco_rua: valor('endereco_rua'),
+                    numero: valor('numero')
+                },
+                pesquisa: {
+                    ocupacao: valor('ocupacao'),
+                    religiao: valorSelectComOutro('religiao', 'religiao_outra'),
+                    governo_lula: valor('governo_lula'),
+                    governo_brandao: valor('governo_brandao'),
+                    governo_dino_penha: valor('governo_dino_penha'),
+                    voto_governador: valor('voto_governador'),
+                    voto_deputado_estadual: valorSelectComOutro('voto_deputado_estadual', 'voto_deputado_estadual_outro'),
+                    voto_deputado_federal: valorSelectComOutro('voto_deputado_federal', 'voto_deputado_federal_outro'),
+                    demandas_bairro_povoado: valoresMarcados('demandas'),
+                    aprova_saude_municipio: valor('aprova_saude_municipio'),
+                    aprova_educacao_municipio: valor('aprova_educacao_municipio'),
+                    aprova_estradas_municipio: valor('aprova_estradas_municipio')
+                },
+                localizacao: { latitude: null, longitude: null }
+            };
+        }
+
+        function enviar() {
+            if (!document.getElementById('consentimento').checked) {
+                alert("Marque o consentimento antes de enviar.");
+                return;
+            }
+
+            const dados = montarDados();
+            if (!dados.identificacao.nome) {
+                alert("Informe o nome da pessoa entrevistada.");
+                return;
+            }
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        dados.localizacao.latitude = pos.coords.latitude;
+                        dados.localizacao.longitude = pos.coords.longitude;
+                        processarEnvio(dados);
+                    },
+                    () => processarEnvio(dados),
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            } else {
+                processarEnvio(dados);
+            }
+        }
+
+        function processarEnvio(dados) {
+            if (!navigator.onLine) {
+                salvarOffline(dados);
+                return;
+            }
+
+            fetch("/coletar", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(dados)
+            })
+            .then(async res => {
+                const resultado = await res.json().catch(() => null);
+                if (!res.redirected && res.ok && resultado && resultado.status === "ok") {
+                    alert("Enviado com sucesso!");
+                    limparFormulario();
+                } else {
+                    salvarOffline(dados);
+                }
+            })
+            .catch(() => salvarOffline(dados));
+        }
+
+        function salvarOffline(dados) {
+            if (!db) {
+                alert("Armazenamento offline ainda carregando. Tente enviar novamente em alguns segundos.");
+                return;
+            }
+
+            const tx = db.transaction(STORE_NAME, "readwrite");
+            const store = tx.objectStore(STORE_NAME);
+            store.add({ dados: dados, data: new Date().toISOString() });
+            tx.oncomplete = function() {
+                alert("Sem internet: cadastro salvo no aparelho. Sincronize quando tiver sinal.");
+                limparFormulario();
+            };
+            tx.onerror = function() {
+                alert("Não foi possível salvar offline. Verifique o armazenamento do aparelho.");
+            };
+        }
+
+        async function sincronizar() {
+            if (!navigator.onLine) {
+                alert("Você ainda está sem internet.");
+                return;
+            }
+            if (!db) {
+                alert("Armazenamento offline ainda carregando. Tente novamente em alguns segundos.");
+                return;
+            }
+
+            const btnSync = document.getElementById('btn-sincronizar');
+            btnSync.disabled = true;
+            btnSync.innerText = "Sincronizando...";
+
+            const tx = db.transaction(STORE_NAME, "readonly");
+            const store = tx.objectStore(STORE_NAME);
+            const allRecords = store.getAll();
+
+            allRecords.onsuccess = async function() {
+                const registros = allRecords.result;
+                if (registros.length === 0) {
+                    alert("Tudo certo! Não há dados pendentes.");
+                    btnSync.disabled = false;
+                    btnSync.innerText = "Sincronizar dados pendentes";
+                    return;
+                }
+
+                let sucessos = 0;
+                for (let item of registros) {
+                    try {
+                        const response = await fetch("/coletar", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(item.dados)
+                        });
+                        const resultado = await response.json().catch(() => null);
+                        if (!response.redirected && response.ok && resultado && resultado.status === "ok") {
+                            const txDel = db.transaction(STORE_NAME, "readwrite");
+                            txDel.objectStore(STORE_NAME).delete(item.id);
+                            sucessos++;
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    }
+                }
+
+                alert(`Sincronização concluída!\nEnviados: ${sucessos}`);
+                btnSync.disabled = false;
+                btnSync.innerText = "Sincronizar dados pendentes";
+                verificarPendencias();
+            };
+        }
+
+        function verificarPendencias() {
+            if (!db) return;
+            const tx = db.transaction(STORE_NAME, "readonly");
+            const store = tx.objectStore(STORE_NAME);
+            const countRequest = store.count();
+            countRequest.onsuccess = function() {
+                if (countRequest.result > 0) {
+                    statusBar.innerText = `Você tem ${countRequest.result} cadastro(s) pendente(s).`;
+                    statusBar.className = "status-pendente";
+                } else {
+                    statusBar.className = "";
+                    statusBar.style.display = "none";
+                }
+            };
+        }
+
+        function limparFormulario() {
+            document.querySelectorAll('input').forEach(input => {
+                if (input.type === 'checkbox') input.checked = false;
+                else input.value = '';
+            });
+            document.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+            document.querySelectorAll('.hidden').forEach(div => div.style.display = 'none');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            verificarPendencias();
+        }
+
+        window.addEventListener('online', verificarPendencias);
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js').catch(console.error);
+        }
+    </script>
+</body>
+</html>
