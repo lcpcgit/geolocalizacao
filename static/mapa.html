@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mapa - Pesquisa de Opinião Pública</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <style>
         body, html { height: 100%; margin: 0; padding: 0; font-family: Arial, sans-serif; }
         #map { height: 100%; width: 100%; background-color: #e5e7eb; }
@@ -56,7 +55,6 @@
         }
         .btn-mapa:hover { background: #f9fafb; }
         .destaque { color: #0f766e; border-left: 4px solid #0f766e; }
-        .leaflet-popup-content { min-width: 220px; }
         @media (max-width: 700px) {
             #painel-filtros { left: 10px; right: 10px; width: auto; }
             #controles-personalizados { bottom: 15px; }
@@ -117,19 +115,30 @@
 
     <div id="map"></div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCKY-q_wyT12fKP3L7FzQiZMjAy7Qer41E&callback=initMap&libraries=places&v=weekly" async defer></script>
+
     <script>
         let map;
         let markers = [];
-
-        document.addEventListener("DOMContentLoaded", initMap);
+        let infoWindow;
 
         function initMap() {
-            map = L.map("map", { zoomControl: true }).setView([-4.0, -44.0], 7);
-            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-                maxZoom: 19,
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            }).addTo(map);
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: { lat: -4.0, lng: -44.0 },
+                zoom: 7,
+                mapTypeId: "hybrid",
+                streetViewControl: true,
+                fullscreenControl: true,
+                mapTypeControlOptions: { position: google.maps.ControlPosition.TOP_RIGHT }
+            });
+
+            infoWindow = new google.maps.InfoWindow();
+            const streetView = map.getStreetView();
+            google.maps.event.addListener(streetView, 'visible_changed', function() {
+                document.getElementById('controles-personalizados').style.display = streetView.getVisible() ? 'none' : 'flex';
+                if (streetView.getVisible()) document.getElementById('painel-filtros').style.display = 'none';
+            });
+
             carregarDados();
         }
 
@@ -157,9 +166,9 @@
         }
 
         function criarMarcadores(lista) {
-            markers.forEach(marker => map.removeLayer(marker));
+            markers.forEach(m => m.setMap(null));
             markers = [];
-            const bounds = [];
+            const bounds = new google.maps.LatLngBounds();
 
             lista.forEach(item => {
                 if (item.latitude === null || item.longitude === null) return;
@@ -168,12 +177,14 @@
                 const pesquisa = item.dados.pesquisa || {};
                 const demandas = Array.isArray(pesquisa.demandas_bairro_povoado) ? pesquisa.demandas_bairro_povoado : [];
 
-                const marker = L.marker([item.latitude, item.longitude], {
+                const marker = new google.maps.Marker({
+                    position: { lat: item.latitude, lng: item.longitude },
+                    map: map,
                     title: identificacao.nome || ""
-                }).addTo(map);
+                });
 
                 const conteudo = `
-                    <div style="font-family: Arial, sans-serif; font-size: 13px; color:#1f2937;">
+                    <div style="font-family: Arial, sans-serif; font-size: 13px; color:#1f2937; min-width: 220px;">
                         <strong style="font-size: 15px; color: #0f766e;">${escapeHtml(identificacao.nome)}</strong><br>
                         <span>${escapeHtml(identificacao.povoado_bairro)}</span>
                         <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 7px 0;">
@@ -188,13 +199,17 @@
                     </div>
                 `;
 
-                marker.bindPopup(conteudo);
+                marker.addListener("click", () => {
+                    infoWindow.setContent(conteudo);
+                    infoWindow.open(map, marker);
+                });
+
                 marker.dadosOriginais = item;
                 markers.push(marker);
-                bounds.push([item.latitude, item.longitude]);
+                bounds.extend(marker.getPosition());
             });
 
-            if (bounds.length > 0) map.fitBounds(bounds, { padding: [40, 40], maxZoom: 17 });
+            if (markers.length > 0) map.fitBounds(bounds);
             atualizarContador(markers.length);
         }
 
@@ -229,12 +244,8 @@
                     (!fFederal || texto(pesquisa.voto_deputado_federal).includes(fFederal)) &&
                     (!fDemanda || demandas.includes(fDemanda));
 
-                if (aparece) {
-                    marker.addTo(map);
-                    visiveis++;
-                } else {
-                    map.removeLayer(marker);
-                }
+                marker.setMap(aparece ? map : null);
+                if (aparece) visiveis++;
             });
 
             atualizarContador(visiveis);
@@ -247,7 +258,6 @@
         function toggleFiltros() {
             const painel = document.getElementById('painel-filtros');
             painel.style.display = (painel.style.display === 'none' || painel.style.display === '') ? 'block' : 'none';
-            setTimeout(() => map.invalidateSize(), 50);
         }
 
         function limparFiltros() {
