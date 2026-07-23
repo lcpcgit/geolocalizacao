@@ -500,7 +500,10 @@
         window.addEventListener('online', verificarPendencias);
 
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/service-worker.js').catch(console.error);
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(() => navigator.serviceWorker.ready)
+                .then(() => fetch('/static/index.html', { cache: 'reload' }))
+                .catch(console.error);
         }
     </script>
 </body>
