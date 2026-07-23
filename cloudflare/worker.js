@@ -21,16 +21,19 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname;
+    const exigirSenha = passwordRequired(env);
 
     if (path === "/") {
-      if (!isAuthenticated(request)) return redirect("/login");
       return redirect(`/static/index.html?v=${env.APP_VERSION || "20260722-pesquisa-opiniao"}`);
     }
 
-    if (path === "/login" && request.method === "GET") return loginPage(false);
+    if (path === "/login" && request.method === "GET") {
+      if (!exigirSenha) return redirect(`/static/index.html?v=${env.APP_VERSION || "20260722-pesquisa-opiniao"}`);
+      return loginPage(false);
+    }
     if (path === "/autenticar" && request.method === "POST") return autenticar(request, env);
 
-    if (!isPublicPath(path) && !isAuthenticated(request)) {
+    if (exigirSenha && !isPublicPath(path) && !isAuthenticated(request)) {
       if (request.method === "GET") return redirect("/login");
       return json({ detail: "Sessao expirada ou nao autenticada" }, 401);
     }
@@ -67,6 +70,10 @@ function isPublicPath(path) {
 function isAuthenticated(request) {
   const cookie = request.headers.get("Cookie") || "";
   return cookie.split(";").map((part) => part.trim()).includes(`${COOKIE_NAME}=${COOKIE_VALUE}`);
+}
+
+function passwordRequired(env) {
+  return ["1", "true", "sim", "yes"].includes(String(env.EXIGIR_SENHA || "false").toLowerCase());
 }
 
 function redirect(location, status = 303) {
@@ -149,6 +156,10 @@ function roundCoord(value) {
 }
 
 async function autenticar(request, env) {
+  if (!passwordRequired(env)) {
+    return redirect(`/static/index.html?v=${env.APP_VERSION || "20260722-pesquisa-opiniao"}`);
+  }
+
   const form = await request.formData();
   const senha = String(form.get("senha") || "");
   const senhaSistema = env.SENHA_SISTEMA || "Lucasph12345";

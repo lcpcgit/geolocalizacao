@@ -28,6 +28,7 @@
   ],
   "vars": {
     "APP_VERSION": "20260722-pesquisa-opiniao",
+    "EXIGIR_SENHA": "false",
     "SENHA_SISTEMA": "Lucasph12345"
   }
 }

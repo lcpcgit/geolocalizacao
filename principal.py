@@ -23,6 +23,7 @@ APP_VERSION = "20260722-pesquisa-opiniao"
 # 🔐 CONFIGURAÇÃO DE SEGURANÇA
 # ==========================================
 SENHA_SISTEMA = os.getenv("SENHA_SISTEMA", "Lucasph12345")
+EXIGIR_SENHA = os.getenv("EXIGIR_SENHA", "false").lower() in {"1", "true", "sim", "yes"}
 # ==========================================
 
 app = FastAPI()
@@ -30,6 +31,9 @@ app = FastAPI()
 # --- MIDDLEWARE DE SEGURANÇA (O PORTEIRO) ---
 class SecurityMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        if not EXIGIR_SENHA:
+            return await call_next(request)
+
         path = request.url.path
         
         # Arquivos liberados sem senha
@@ -150,10 +154,15 @@ def normalizar_dados_pesquisa(dados: Dict[str, Any]) -> Dict[str, Any]:
 # ==========================================
 @app.get("/login", response_class=HTMLResponse)
 async def pagina_login(request: Request):
+    if not EXIGIR_SENHA:
+        return RedirectResponse(url=f"/static/index.html?v={APP_VERSION}", status_code=303)
     return templates.TemplateResponse("login.html", {"request": request, "erro": False})
 
 @app.post("/autenticar")
 async def autenticar(request: Request, senha: str = Form(...)):
+    if not EXIGIR_SENHA:
+        return RedirectResponse(url=f"/static/index.html?v={APP_VERSION}", status_code=303)
+
     if senha == SENHA_SISTEMA:
         # Senha correta: Cria cookie de 30 dias
         response = RedirectResponse(url="/static/index.html", status_code=303)
