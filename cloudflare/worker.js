@@ -16,6 +16,12 @@ const CAMPOS_PESQUISA = [
   "aprova_estradas_municipio"
 ];
 const DEMANDAS = ["Água", "Estrada", "Escola", "Posto de Saúde", "Praça", "Iluminação Pública"];
+const LIMITES_BRASIL = {
+  minLat: -34,
+  maxLat: 6,
+  minLng: -74,
+  maxLng: -34
+};
 
 export default {
   async fetch(request, env) {
@@ -155,6 +161,24 @@ function roundCoord(value) {
   return Number.isFinite(number) ? Math.round(number * 1000000) / 1000000 : null;
 }
 
+function normalizarCoordenadas(latitudeValue, longitudeValue) {
+  const latitude = roundCoord(latitudeValue);
+  const longitude = roundCoord(longitudeValue);
+  if (!coordenadaValidaBrasil(latitude, longitude)) {
+    return { latitude: null, longitude: null };
+  }
+  return { latitude, longitude };
+}
+
+function coordenadaValidaBrasil(latitude, longitude) {
+  if (latitude === null || longitude === null) return false;
+  if (Math.abs(latitude) < 0.000001 && Math.abs(longitude) < 0.000001) return false;
+  return latitude >= LIMITES_BRASIL.minLat &&
+    latitude <= LIMITES_BRASIL.maxLat &&
+    longitude >= LIMITES_BRASIL.minLng &&
+    longitude <= LIMITES_BRASIL.maxLng;
+}
+
 async function autenticar(request, env) {
   if (!passwordRequired(env)) {
     return redirect(`/static/index.html?v=${env.APP_VERSION || "20260722-pesquisa-opiniao"}`);
@@ -208,8 +232,7 @@ function loginPage(erro) {
 
 async function coletar(request, env) {
   const dados = normalizarDados(await request.json());
-  const latitude = roundCoord(dados.localizacao.latitude);
-  const longitude = roundCoord(dados.localizacao.longitude);
+  const { latitude, longitude } = normalizarCoordenadas(dados.localizacao.latitude, dados.localizacao.longitude);
   dados.localizacao.latitude = latitude;
   dados.localizacao.longitude = longitude;
 
@@ -228,13 +251,20 @@ async function listarRespostas(env) {
     ORDER BY id DESC
   `).all();
 
-  return json(result.results.map((row) => ({
-    id: row.id,
-    data_hora: row.data_hora,
-    latitude: row.latitude,
-    longitude: row.longitude,
-    dados: normalizarDados(JSON.parse(row.dados_json || "{}"))
-  })));
+  return json(result.results.map((row) => {
+    const coordenadas = normalizarCoordenadas(row.latitude, row.longitude);
+    const dados = normalizarDados(JSON.parse(row.dados_json || "{}"));
+    dados.localizacao.latitude = coordenadas.latitude;
+    dados.localizacao.longitude = coordenadas.longitude;
+
+    return {
+      id: row.id,
+      data_hora: row.data_hora,
+      latitude: coordenadas.latitude,
+      longitude: coordenadas.longitude,
+      dados
+    };
+  }));
 }
 
 async function visualizarFicha(id, env) {
@@ -283,10 +313,11 @@ async function exportarCsv(env) {
   const linhas = [headers];
   for (const row of result.results) {
     const dados = normalizarDados(JSON.parse(row.dados_json || "{}"));
+    const coordenadas = normalizarCoordenadas(row.latitude, row.longitude);
     const i = dados.identificacao;
     const p = dados.pesquisa;
     linhas.push([
-      row.data_hora, row.latitude, row.longitude, i.nome, i.telefone, i.povoado_bairro,
+      row.data_hora, coordenadas.latitude, coordenadas.longitude, i.nome, i.telefone, i.povoado_bairro,
       i.endereco_rua, i.numero, p.ocupacao, p.religiao, p.governo_lula,
       p.governo_brandao, p.governo_dino_penha, p.voto_governador,
       p.voto_deputado_estadual, p.voto_deputado_federal,

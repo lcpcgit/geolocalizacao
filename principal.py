@@ -18,6 +18,12 @@ DB_PATH = os.getenv("DB_PATH", os.path.join(BASE_DIR, "dados.db"))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 APP_VERSION = "20260722-pesquisa-opiniao"
+LIMITES_BRASIL = {
+    "min_lat": -34,
+    "max_lat": 6,
+    "min_lng": -74,
+    "max_lng": -34,
+}
 
 # ==========================================
 # 🔐 CONFIGURAÇÃO DE SEGURANÇA
@@ -149,6 +155,26 @@ def normalizar_dados_pesquisa(dados: Dict[str, Any]) -> Dict[str, Any]:
 
     return dados
 
+def normalizar_coordenadas(latitude_valor, longitude_valor):
+    try:
+        latitude = round(float(latitude_valor), 6) if latitude_valor not in (None, "") else None
+        longitude = round(float(longitude_valor), 6) if longitude_valor not in (None, "") else None
+    except (TypeError, ValueError):
+        return None, None
+    if not coordenada_valida_brasil(latitude, longitude):
+        return None, None
+    return latitude, longitude
+
+def coordenada_valida_brasil(latitude, longitude):
+    if latitude is None or longitude is None:
+        return False
+    if abs(latitude) < 0.000001 and abs(longitude) < 0.000001:
+        return False
+    return (
+        LIMITES_BRASIL["min_lat"] <= latitude <= LIMITES_BRASIL["max_lat"] and
+        LIMITES_BRASIL["min_lng"] <= longitude <= LIMITES_BRASIL["max_lng"]
+    )
+
 # ==========================================
 # 🔐 ROTAS DE LOGIN
 # ==========================================
@@ -275,8 +301,10 @@ def exportar_excel():
             demandas = pesquisa.get("demandas_bairro_povoado", [])
             txt_demandas = "; ".join(demandas) if isinstance(demandas, list) else ""
 
+            latitude, longitude = normalizar_coordenadas(row["latitude"], row["longitude"])
+
             ws.append([
-                row["data_hora"], row["latitude"], row["longitude"],
+                row["data_hora"], latitude, longitude,
                 ident.get("nome", ""), ident.get("telefone", ""),
                 ident.get("povoado_bairro", ""), ident.get("endereco_rua", ""),
                 ident.get("numero", ""), pesquisa.get("ocupacao", ""),
@@ -330,8 +358,9 @@ def coletar(dados: Dados):
     
     payload = normalizar_dados_pesquisa(dados.model_dump())
 
-    latitude = round(dados.localizacao.latitude, 6) if dados.localizacao.latitude is not None else None
-    longitude = round(dados.localizacao.longitude, 6) if dados.localizacao.longitude is not None else None
+    latitude, longitude = normalizar_coordenadas(dados.localizacao.latitude, dados.localizacao.longitude)
+    payload["localizacao"]["latitude"] = latitude
+    payload["localizacao"]["longitude"] = longitude
 
     cursor.execute("""
         INSERT INTO respostas (data_hora, latitude, longitude, dados_json)
@@ -353,12 +382,16 @@ def listar_respostas():
     cursor.execute("SELECT id, data_hora, latitude, longitude, dados_json FROM respostas ORDER BY id DESC")
     registros = []
     for row in cursor.fetchall():
+        latitude, longitude = normalizar_coordenadas(row["latitude"], row["longitude"])
+        dados = normalizar_dados_pesquisa(json.loads(row["dados_json"]))
+        dados["localizacao"]["latitude"] = latitude
+        dados["localizacao"]["longitude"] = longitude
         registros.append({
             "id": row["id"],
             "data_hora": row["data_hora"],
-            "latitude": row["latitude"],
-            "longitude": row["longitude"],
-            "dados": normalizar_dados_pesquisa(json.loads(row["dados_json"]))
+            "latitude": latitude,
+            "longitude": longitude,
+            "dados": dados
         })
     conn.close()
     return registros

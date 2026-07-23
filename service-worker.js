@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pesquisa-opiniao-v4';
+const CACHE_NAME = 'pesquisa-opiniao-v5';
 
 const OFFLINE_PAGE = '/static/index.html';
 const ASSETS = [

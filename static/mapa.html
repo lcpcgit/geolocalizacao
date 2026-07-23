@@ -122,6 +122,12 @@
         let markers = [];
         let infoWindow;
         let totalSemLocalizacao = 0;
+        const LIMITES_BRASIL = {
+            minLat: -34,
+            maxLat: 6,
+            minLng: -74,
+            maxLng: -34
+        };
 
         function initMap() {
             map = new google.maps.Map(document.getElementById("map"), {
@@ -166,6 +172,15 @@
             return String(valor ?? "").toLowerCase();
         }
 
+        function coordenadaValidaBrasil(lat, lng) {
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+            if (Math.abs(lat) < 0.000001 && Math.abs(lng) < 0.000001) return false;
+            return lat >= LIMITES_BRASIL.minLat &&
+                lat <= LIMITES_BRASIL.maxLat &&
+                lng >= LIMITES_BRASIL.minLng &&
+                lng <= LIMITES_BRASIL.maxLng;
+        }
+
         function criarMarcadores(lista) {
             markers.forEach(m => m.setMap(null));
             markers = [];
@@ -175,7 +190,7 @@
             lista.forEach(item => {
                 const lat = Number(item.latitude);
                 const lng = Number(item.longitude);
-                if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                if (!coordenadaValidaBrasil(lat, lng)) {
                     semLocalizacao++;
                     return;
                 }

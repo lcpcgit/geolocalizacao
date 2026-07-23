@@ -364,8 +364,14 @@
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
-                        dados.localizacao.latitude = pos.coords.latitude;
-                        dados.localizacao.longitude = pos.coords.longitude;
+                        const latitude = Number(pos.coords.latitude);
+                        const longitude = Number(pos.coords.longitude);
+                        if (!coordenadaValidaBrasil(latitude, longitude)) {
+                            continuarSemLocalizacao(dados);
+                            return;
+                        }
+                        dados.localizacao.latitude = latitude;
+                        dados.localizacao.longitude = longitude;
                         processarEnvio(dados);
                     },
                     () => continuarSemLocalizacao(dados),
@@ -379,6 +385,12 @@
         function continuarSemLocalizacao(dados) {
             const salvar = confirm("Nao foi possivel pegar a localizacao. Salvar mesmo assim? Sem localizacao, esta ficha nao aparece no mapa.");
             if (salvar) processarEnvio(dados);
+        }
+
+        function coordenadaValidaBrasil(lat, lng) {
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+            if (Math.abs(lat) < 0.000001 && Math.abs(lng) < 0.000001) return false;
+            return lat >= -34 && lat <= 6 && lng >= -74 && lng <= -34;
         }
 
         function processarEnvio(dados) {
