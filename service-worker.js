@@ -1,10 +1,11 @@
-const CACHE_NAME = 'pesquisa-opiniao-v3';
+const CACHE_NAME = 'pesquisa-opiniao-v4';
 
 const OFFLINE_PAGE = '/static/index.html';
 const ASSETS = [
     '/',
     OFFLINE_PAGE,
     '/static/index.html?v=20260722-pesquisa-opiniao',
+    '/static/mapa.html',
     '/static/manifest.json',
     '/service-worker.js'
 ];

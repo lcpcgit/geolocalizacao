@@ -121,6 +121,7 @@
         let map;
         let markers = [];
         let infoWindow;
+        let totalSemLocalizacao = 0;
 
         function initMap() {
             map = new google.maps.Map(document.getElementById("map"), {
@@ -169,16 +170,22 @@
             markers.forEach(m => m.setMap(null));
             markers = [];
             const bounds = new google.maps.LatLngBounds();
+            let semLocalizacao = 0;
 
             lista.forEach(item => {
-                if (item.latitude === null || item.longitude === null) return;
+                const lat = Number(item.latitude);
+                const lng = Number(item.longitude);
+                if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                    semLocalizacao++;
+                    return;
+                }
 
                 const identificacao = item.dados.identificacao || {};
                 const pesquisa = item.dados.pesquisa || {};
                 const demandas = Array.isArray(pesquisa.demandas_bairro_povoado) ? pesquisa.demandas_bairro_povoado : [];
 
                 const marker = new google.maps.Marker({
-                    position: { lat: item.latitude, lng: item.longitude },
+                    position: { lat, lng },
                     map: map,
                     title: identificacao.nome || ""
                 });
@@ -209,6 +216,7 @@
                 bounds.extend(marker.getPosition());
             });
 
+            totalSemLocalizacao = semLocalizacao;
             if (markers.length > 0) map.fitBounds(bounds);
             atualizarContador(markers.length);
         }
@@ -252,7 +260,8 @@
         }
 
         function atualizarContador(qtd) {
-            document.getElementById('contador').innerText = qtd + " encontrado(s)";
+            const semLocalizacao = totalSemLocalizacao ? " | " + totalSemLocalizacao + " sem localizacao" : "";
+            document.getElementById('contador').innerText = qtd + " encontrado(s)" + semLocalizacao;
         }
 
         function toggleFiltros() {

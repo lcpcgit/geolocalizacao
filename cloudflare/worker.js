@@ -290,12 +290,17 @@ async function exportarCsv(env) {
       i.endereco_rua, i.numero, p.ocupacao, p.religiao, p.governo_lula,
       p.governo_brandao, p.governo_dino_penha, p.voto_governador,
       p.voto_deputado_estadual, p.voto_deputado_federal,
-      p.demandas_bairro_povoado.join("; "), p.aprova_saude_municipio,
+      p.demandas_bairro_povoado.join(", "), p.aprova_saude_municipio,
       p.aprova_educacao_municipio, p.aprova_estradas_municipio
     ]);
   }
 
-  const csv = linhas.map((linha) => linha.map(csvCell).join(",")).join("\r\n");
+  const delimiter = ";";
+  const csv = [
+    `sep=${delimiter}`,
+    ...linhas.map((linha) => linha.map((cell) => csvCell(cell)).join(delimiter))
+  ].join("\r\n");
+
   return new Response(`\ufeff${csv}`, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",

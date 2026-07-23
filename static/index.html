@@ -368,12 +368,17 @@
                         dados.localizacao.longitude = pos.coords.longitude;
                         processarEnvio(dados);
                     },
-                    () => processarEnvio(dados),
+                    () => continuarSemLocalizacao(dados),
                     { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
                 );
             } else {
-                processarEnvio(dados);
+                continuarSemLocalizacao(dados);
             }
+        }
+
+        function continuarSemLocalizacao(dados) {
+            const salvar = confirm("Nao foi possivel pegar a localizacao. Salvar mesmo assim? Sem localizacao, esta ficha nao aparece no mapa.");
+            if (salvar) processarEnvio(dados);
         }
 
         function processarEnvio(dados) {
