@@ -17,7 +17,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.getenv("DB_PATH", os.path.join(BASE_DIR, "dados.db"))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
-APP_VERSION = "20260722-pesquisa-opiniao"
+APP_VERSION = "20260729-questionario-1"
 LIMITES_BRASIL = {
     "min_lat": -34,
     "max_lat": 6,
@@ -126,7 +126,7 @@ def normalizar_dados_pesquisa(dados: Dict[str, Any]) -> Dict[str, Any]:
 
     identificacao_padrao = {
         "nome": "",
-        "telefone": "",
+        "moradores_casa": "",
         "povoado_bairro": "",
         "endereco_rua": "",
         "numero": "",
@@ -137,19 +137,22 @@ def normalizar_dados_pesquisa(dados: Dict[str, Any]) -> Dict[str, Any]:
         "governo_lula": "",
         "governo_brandao": "",
         "governo_dino_penha": "",
+        "voto_presidente": "",
         "voto_governador": "",
         "voto_deputado_estadual": "",
         "voto_deputado_federal": "",
         "demandas_bairro_povoado": [],
         "aprova_saude_municipio": "",
         "aprova_educacao_municipio": "",
-        "aprova_estradas_municipio": "",
+        "aprova_infraestrutura_municipio": "",
     }
 
     for chave, valor in identificacao_padrao.items():
         dados["identificacao"].setdefault(chave, valor)
     for chave, valor in pesquisa_padrao.items():
         dados["pesquisa"].setdefault(chave, valor)
+    if not dados["pesquisa"].get("aprova_infraestrutura_municipio") and dados["pesquisa"].get("aprova_estradas_municipio"):
+        dados["pesquisa"]["aprova_infraestrutura_municipio"] = dados["pesquisa"]["aprova_estradas_municipio"]
     if not isinstance(dados["pesquisa"].get("demandas_bairro_povoado"), list):
         dados["pesquisa"]["demandas_bairro_povoado"] = []
 
@@ -237,9 +240,14 @@ async def atualizar(id_resposta: int, request: Request):
     d = normalizar_dados_pesquisa(json.loads(resultado["dados_json"]))
 
     try:
+        demandas = form_data.getlist("demandas_bairro_povoado")
+        demanda_outra = str(form_data.get("demandas_outros", "")).strip()
+        if demanda_outra:
+            demandas.append(demanda_outra)
+
         d["identificacao"] = {
             "nome": form_data.get("nome", ""),
-            "telefone": form_data.get("telefone", ""),
+            "moradores_casa": form_data.get("moradores_casa", ""),
             "povoado_bairro": form_data.get("povoado_bairro", ""),
             "endereco_rua": form_data.get("endereco_rua", ""),
             "numero": form_data.get("numero", ""),
@@ -250,13 +258,14 @@ async def atualizar(id_resposta: int, request: Request):
             "governo_lula": form_data.get("governo_lula", ""),
             "governo_brandao": form_data.get("governo_brandao", ""),
             "governo_dino_penha": form_data.get("governo_dino_penha", ""),
+            "voto_presidente": form_data.get("voto_presidente", ""),
             "voto_governador": form_data.get("voto_governador", ""),
             "voto_deputado_estadual": form_data.get("voto_deputado_estadual", ""),
             "voto_deputado_federal": form_data.get("voto_deputado_federal", ""),
-            "demandas_bairro_povoado": form_data.getlist("demandas_bairro_povoado"),
+            "demandas_bairro_povoado": demandas,
             "aprova_saude_municipio": form_data.get("aprova_saude_municipio", ""),
             "aprova_educacao_municipio": form_data.get("aprova_educacao_municipio", ""),
-            "aprova_estradas_municipio": form_data.get("aprova_estradas_municipio", ""),
+            "aprova_infraestrutura_municipio": form_data.get("aprova_infraestrutura_municipio", ""),
         }
         
         novo_json = json.dumps(d, ensure_ascii=False)
@@ -282,12 +291,12 @@ def exportar_excel():
     ws.title = "Pesquisa Opiniao"
 
     headers = [
-        "Data/Hora", "Latitude", "Longitude", "Nome", "Telefone",
+        "Data/Hora", "Latitude", "Longitude", "Nome", "Pessoas na Casa",
         "Povoado/Bairro", "Endereco/Rua", "Numero", "Ocupacao", "Religiao",
         "Governo Lula", "Governo Brandao", "Governo Dino Penha",
-        "Voto Governador", "Voto Deputado Estadual", "Voto Deputado Federal",
+        "Voto Presidente", "Voto Governador", "Voto Deputado Estadual", "Voto Deputado Federal",
         "Demandas Bairro/Povoado", "Aprova Saude Municipio",
-        "Aprova Educacao Municipio", "Aprova Estradas Municipio"
+        "Aprova Educacao Municipio", "Aprova Infraestrutura Municipio"
     ]
     
     ws.append(headers)
@@ -305,16 +314,16 @@ def exportar_excel():
 
             ws.append([
                 row["data_hora"], latitude, longitude,
-                ident.get("nome", ""), ident.get("telefone", ""),
+                ident.get("nome", ""), ident.get("moradores_casa", ""),
                 ident.get("povoado_bairro", ""), ident.get("endereco_rua", ""),
                 ident.get("numero", ""), pesquisa.get("ocupacao", ""),
                 pesquisa.get("religiao", ""), pesquisa.get("governo_lula", ""),
                 pesquisa.get("governo_brandao", ""), pesquisa.get("governo_dino_penha", ""),
-                pesquisa.get("voto_governador", ""), pesquisa.get("voto_deputado_estadual", ""),
+                pesquisa.get("voto_presidente", ""), pesquisa.get("voto_governador", ""), pesquisa.get("voto_deputado_estadual", ""),
                 pesquisa.get("voto_deputado_federal", ""), txt_demandas,
                 pesquisa.get("aprova_saude_municipio", ""),
                 pesquisa.get("aprova_educacao_municipio", ""),
-                pesquisa.get("aprova_estradas_municipio", "")
+                pesquisa.get("aprova_infraestrutura_municipio", "")
             ])
         except: continue
 

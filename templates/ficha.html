@@ -43,8 +43,8 @@
 
         <div class="linha">
             <div>
-                <label>Telefone</label>
-                <input type="text" name="telefone" value="{{ dados.identificacao.telefone }}">
+                <label>Quantas pessoas moram na casa?</label>
+                <input type="text" name="moradores_casa" value="{{ dados.identificacao.moradores_casa }}">
             </div>
             <div>
                 <label>Povoado ou bairro</label>
@@ -96,28 +96,41 @@
         </select>
 
         <h2>Intenção de Voto</h2>
-        <label>6. Governador</label>
+        <label>6. Presidente</label>
+        <input type="text" name="voto_presidente" value="{{ dados.pesquisa.voto_presidente }}">
+
+        <label>7. Governador</label>
         <input type="text" name="voto_governador" value="{{ dados.pesquisa.voto_governador }}">
 
-        <label>7. Deputado estadual</label>
+        <label>8. Deputado estadual</label>
         <input type="text" name="voto_deputado_estadual" value="{{ dados.pesquisa.voto_deputado_estadual }}">
 
-        <label>8. Deputado federal</label>
+        <label>9. Deputado federal</label>
         <input type="text" name="voto_deputado_federal" value="{{ dados.pesquisa.voto_deputado_federal }}">
 
         <h2>Prioridades e Serviços</h2>
-        <label>9. O que espera que seja feito no bairro/povoado?</label>
+        <label>10. O que o bairro/povoado mais precisa?</label>
         <div class="opcoes">
             {% set demandas = dados.pesquisa.demandas_bairro_povoado %}
+            {% set demandas_padrao = ['Água', 'Estrada', 'Escola', 'Posto de Saúde', 'Praça', 'Iluminação Pública', 'Pavimentação'] %}
             <label><input type="checkbox" name="demandas_bairro_povoado" value="Água" {% if 'Água' in demandas %}checked{% endif %}> Água</label>
             <label><input type="checkbox" name="demandas_bairro_povoado" value="Estrada" {% if 'Estrada' in demandas %}checked{% endif %}> Estrada</label>
             <label><input type="checkbox" name="demandas_bairro_povoado" value="Escola" {% if 'Escola' in demandas %}checked{% endif %}> Escola</label>
             <label><input type="checkbox" name="demandas_bairro_povoado" value="Posto de Saúde" {% if 'Posto de Saúde' in demandas %}checked{% endif %}> Posto de Saúde</label>
             <label><input type="checkbox" name="demandas_bairro_povoado" value="Praça" {% if 'Praça' in demandas %}checked{% endif %}> Praça</label>
             <label><input type="checkbox" name="demandas_bairro_povoado" value="Iluminação Pública" {% if 'Iluminação Pública' in demandas %}checked{% endif %}> Iluminação Pública</label>
+            <label><input type="checkbox" name="demandas_bairro_povoado" value="Pavimentação" {% if 'Pavimentação' in demandas %}checked{% endif %}> Pavimentação</label>
         </div>
+        {% set demandas_extras = [] %}
+        {% for demanda in demandas %}
+            {% if demanda not in demandas_padrao %}
+                {% set _ = demandas_extras.append(demanda) %}
+            {% endif %}
+        {% endfor %}
+        <label>Outros</label>
+        <input type="text" name="demandas_outros" value="{{ demandas_extras|join(', ') }}">
 
-        <label>10. Aprovação do setor saúde do município</label>
+        <label>11. Aprovação do setor saúde do município</label>
         <select name="aprova_saude_municipio">
             <option value=""></option>
             <option value="Aprova" {% if dados.pesquisa.aprova_saude_municipio == 'Aprova' %}selected{% endif %}>Aprova</option>
@@ -125,7 +138,7 @@
             <option value="Não Sabe" {% if dados.pesquisa.aprova_saude_municipio == 'Não Sabe' %}selected{% endif %}>Não Sabe</option>
         </select>
 
-        <label>11. Aprovação do setor educação do município</label>
+        <label>12. Aprovação do setor educação do município</label>
         <select name="aprova_educacao_municipio">
             <option value=""></option>
             <option value="Aprova" {% if dados.pesquisa.aprova_educacao_municipio == 'Aprova' %}selected{% endif %}>Aprova</option>
@@ -133,12 +146,12 @@
             <option value="Não Sabe" {% if dados.pesquisa.aprova_educacao_municipio == 'Não Sabe' %}selected{% endif %}>Não Sabe</option>
         </select>
 
-        <label>12. Aprovação do setor estradas do município</label>
-        <select name="aprova_estradas_municipio">
+        <label>13. Aprovação do setor de infraestrutura do município</label>
+        <select name="aprova_infraestrutura_municipio">
             <option value=""></option>
-            <option value="Aprova" {% if dados.pesquisa.aprova_estradas_municipio == 'Aprova' %}selected{% endif %}>Aprova</option>
-            <option value="Não Aprova" {% if dados.pesquisa.aprova_estradas_municipio == 'Não Aprova' %}selected{% endif %}>Não Aprova</option>
-            <option value="Não Sabe" {% if dados.pesquisa.aprova_estradas_municipio == 'Não Sabe' %}selected{% endif %}>Não Sabe</option>
+            <option value="Aprova" {% if dados.pesquisa.aprova_infraestrutura_municipio == 'Aprova' %}selected{% endif %}>Aprova</option>
+            <option value="Não Aprova" {% if dados.pesquisa.aprova_infraestrutura_municipio == 'Não Aprova' %}selected{% endif %}>Não Aprova</option>
+            <option value="Não Sabe" {% if dados.pesquisa.aprova_infraestrutura_municipio == 'Não Sabe' %}selected{% endif %}>Não Sabe</option>
         </select>
 
         <div class="acoes">

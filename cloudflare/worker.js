@@ -1,21 +1,23 @@
 const COOKIE_NAME = "sessao_usuario";
 const COOKIE_VALUE = "acesso_liberado_ok";
+const APP_VERSION_FALLBACK = "20260729-questionario-1";
 
-const CAMPOS_IDENTIFICACAO = ["nome", "telefone", "povoado_bairro", "endereco_rua", "numero"];
+const CAMPOS_IDENTIFICACAO = ["nome", "moradores_casa", "povoado_bairro", "endereco_rua", "numero"];
 const CAMPOS_PESQUISA = [
   "ocupacao",
   "religiao",
   "governo_lula",
   "governo_brandao",
   "governo_dino_penha",
+  "voto_presidente",
   "voto_governador",
   "voto_deputado_estadual",
   "voto_deputado_federal",
   "aprova_saude_municipio",
   "aprova_educacao_municipio",
-  "aprova_estradas_municipio"
+  "aprova_infraestrutura_municipio"
 ];
-const DEMANDAS = ["Água", "Estrada", "Escola", "Posto de Saúde", "Praça", "Iluminação Pública"];
+const DEMANDAS = ["Água", "Estrada", "Escola", "Posto de Saúde", "Praça", "Iluminação Pública", "Pavimentação"];
 const LIMITES_BRASIL = {
   minLat: -34,
   maxLat: 6,
@@ -30,11 +32,11 @@ export default {
     const exigirSenha = passwordRequired(env);
 
     if (path === "/") {
-      return redirect(`/static/index.html?v=${env.APP_VERSION || "20260722-pesquisa-opiniao"}`);
+      return redirect(`/static/index.html?v=${env.APP_VERSION || APP_VERSION_FALLBACK}`);
     }
 
     if (path === "/login" && request.method === "GET") {
-      if (!exigirSenha) return redirect(`/static/index.html?v=${env.APP_VERSION || "20260722-pesquisa-opiniao"}`);
+      if (!exigirSenha) return redirect(`/static/index.html?v=${env.APP_VERSION || APP_VERSION_FALLBACK}`);
       return loginPage(false);
     }
     if (path === "/autenticar" && request.method === "POST") return autenticar(request, env);
@@ -117,7 +119,7 @@ function normalizarDados(dados = {}) {
   const normalizado = {
     identificacao: {
       nome: "",
-      telefone: "",
+      moradores_casa: "",
       povoado_bairro: "",
       endereco_rua: "",
       numero: ""
@@ -128,13 +130,14 @@ function normalizarDados(dados = {}) {
       governo_lula: "",
       governo_brandao: "",
       governo_dino_penha: "",
+      voto_presidente: "",
       voto_governador: "",
       voto_deputado_estadual: "",
       voto_deputado_federal: "",
       demandas_bairro_povoado: [],
       aprova_saude_municipio: "",
       aprova_educacao_municipio: "",
-      aprova_estradas_municipio: ""
+      aprova_infraestrutura_municipio: ""
     },
     localizacao: {
       latitude: localizacao.latitude ?? null,
@@ -144,6 +147,9 @@ function normalizarDados(dados = {}) {
 
   for (const campo of CAMPOS_IDENTIFICACAO) normalizado.identificacao[campo] = stringValue(identificacao[campo]);
   for (const campo of CAMPOS_PESQUISA) normalizado.pesquisa[campo] = stringValue(pesquisa[campo]);
+  if (!normalizado.pesquisa.aprova_infraestrutura_municipio && pesquisa.aprova_estradas_municipio) {
+    normalizado.pesquisa.aprova_infraestrutura_municipio = stringValue(pesquisa.aprova_estradas_municipio);
+  }
   normalizado.pesquisa.demandas_bairro_povoado = Array.isArray(pesquisa.demandas_bairro_povoado)
     ? pesquisa.demandas_bairro_povoado.map(stringValue).filter(Boolean)
     : [];
@@ -181,7 +187,7 @@ function coordenadaValidaBrasil(latitude, longitude) {
 
 async function autenticar(request, env) {
   if (!passwordRequired(env)) {
-    return redirect(`/static/index.html?v=${env.APP_VERSION || "20260722-pesquisa-opiniao"}`);
+    return redirect(`/static/index.html?v=${env.APP_VERSION || APP_VERSION_FALLBACK}`);
   }
 
   const form = await request.formData();
@@ -193,7 +199,7 @@ async function autenticar(request, env) {
   return new Response(null, {
     status: 303,
     headers: {
-      Location: `/static/index.html?v=${env.APP_VERSION || "20260722-pesquisa-opiniao"}`,
+      Location: `/static/index.html?v=${env.APP_VERSION || APP_VERSION_FALLBACK}`,
       "Set-Cookie": `${COOKIE_NAME}=${COOKIE_VALUE}; Max-Age=2592000; Path=/; HttpOnly; SameSite=Lax; Secure`
     }
   });
@@ -276,11 +282,15 @@ async function visualizarFicha(id, env) {
 
 async function atualizar(id, request, env) {
   const form = await request.formData();
+  const demandas = form.getAll("demandas_bairro_povoado").map(stringValue).filter(Boolean);
+  const demandaOutra = stringValue(form.get("demandas_outros")).trim();
+  if (demandaOutra) demandas.push(demandaOutra);
+
   const dados = normalizarDados({
     identificacao: Object.fromEntries(CAMPOS_IDENTIFICACAO.map((campo) => [campo, form.get(campo)])),
     pesquisa: {
       ...Object.fromEntries(CAMPOS_PESQUISA.map((campo) => [campo, form.get(campo)])),
-      demandas_bairro_povoado: form.getAll("demandas_bairro_povoado")
+      demandas_bairro_povoado: demandas
     }
   });
 
@@ -303,11 +313,11 @@ async function exportarCsv(env) {
   `).all();
 
   const headers = [
-    "Data/Hora", "Latitude", "Longitude", "Nome", "Telefone", "Povoado/Bairro",
+    "Data/Hora", "Latitude", "Longitude", "Nome", "Pessoas na Casa", "Povoado/Bairro",
     "Endereco/Rua", "Numero", "Ocupacao", "Religiao", "Governo Lula",
-    "Governo Brandao", "Governo Dino Penha", "Voto Governador",
+    "Governo Brandao", "Governo Dino Penha", "Voto Presidente", "Voto Governador",
     "Voto Deputado Estadual", "Voto Deputado Federal", "Demandas Bairro/Povoado",
-    "Aprova Saude Municipio", "Aprova Educacao Municipio", "Aprova Estradas Municipio"
+    "Aprova Saude Municipio", "Aprova Educacao Municipio", "Aprova Infraestrutura Municipio"
   ];
 
   const linhas = [headers];
@@ -317,12 +327,12 @@ async function exportarCsv(env) {
     const i = dados.identificacao;
     const p = dados.pesquisa;
     linhas.push([
-      row.data_hora, coordenadas.latitude, coordenadas.longitude, i.nome, i.telefone, i.povoado_bairro,
+      row.data_hora, coordenadas.latitude, coordenadas.longitude, i.nome, i.moradores_casa, i.povoado_bairro,
       i.endereco_rua, i.numero, p.ocupacao, p.religiao, p.governo_lula,
-      p.governo_brandao, p.governo_dino_penha, p.voto_governador,
+      p.governo_brandao, p.governo_dino_penha, p.voto_presidente, p.voto_governador,
       p.voto_deputado_estadual, p.voto_deputado_federal,
       p.demandas_bairro_povoado.join(", "), p.aprova_saude_municipio,
-      p.aprova_educacao_municipio, p.aprova_estradas_municipio
+      p.aprova_educacao_municipio, p.aprova_infraestrutura_municipio
     ]);
   }
 
@@ -366,6 +376,7 @@ function renderFicha(id, dados) {
   const i = dados.identificacao;
   const p = dados.pesquisa;
   const demandas = p.demandas_bairro_povoado;
+  const demandasExtras = demandas.filter((demanda) => !DEMANDAS.includes(demanda)).join(", ");
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -400,7 +411,7 @@ function renderFicha(id, dados) {
     <h2>Identificação</h2>
     <label>Nome</label><input name="nome" value="${escapeHtml(i.nome)}">
     <div class="linha">
-      <div><label>Telefone</label><input name="telefone" value="${escapeHtml(i.telefone)}"></div>
+      <div><label>Quantas pessoas moram na casa?</label><input name="moradores_casa" value="${escapeHtml(i.moradores_casa)}"></div>
       <div><label>Povoado ou bairro</label><input name="povoado_bairro" value="${escapeHtml(i.povoado_bairro)}"></div>
     </div>
     <div class="linha">
@@ -415,17 +426,19 @@ function renderFicha(id, dados) {
     ${approvalSelect("4. Governo Brandão", "governo_brandao", p.governo_brandao)}
     ${approvalSelect("5. Governo de Dino Penha", "governo_dino_penha", p.governo_dino_penha)}
     <h2>Intenção de Voto</h2>
-    <label>6. Governador</label><input name="voto_governador" value="${escapeHtml(p.voto_governador)}">
-    <label>7. Deputado estadual</label><input name="voto_deputado_estadual" value="${escapeHtml(p.voto_deputado_estadual)}">
-    <label>8. Deputado federal</label><input name="voto_deputado_federal" value="${escapeHtml(p.voto_deputado_federal)}">
+    <label>6. Presidente</label><input name="voto_presidente" value="${escapeHtml(p.voto_presidente)}">
+    <label>7. Governador</label><input name="voto_governador" value="${escapeHtml(p.voto_governador)}">
+    <label>8. Deputado estadual</label><input name="voto_deputado_estadual" value="${escapeHtml(p.voto_deputado_estadual)}">
+    <label>9. Deputado federal</label><input name="voto_deputado_federal" value="${escapeHtml(p.voto_deputado_federal)}">
     <h2>Prioridades e Serviços</h2>
-    <label>9. O que espera que seja feito no bairro/povoado?</label>
+    <label>10. O que o bairro/povoado mais precisa?</label>
     <div class="opcoes">
       ${DEMANDAS.map((demanda) => `<label><input type="checkbox" name="demandas_bairro_povoado" value="${escapeHtml(demanda)}" ${checked(demandas, demanda)}> ${escapeHtml(demanda)}</label>`).join("")}
     </div>
-    ${approvalSelect("10. Aprovação do setor saúde do município", "aprova_saude_municipio", p.aprova_saude_municipio)}
-    ${approvalSelect("11. Aprovação do setor educação do município", "aprova_educacao_municipio", p.aprova_educacao_municipio)}
-    ${approvalSelect("12. Aprovação do setor estradas do município", "aprova_estradas_municipio", p.aprova_estradas_municipio)}
+    <label>Outros</label><input name="demandas_outros" value="${escapeHtml(demandasExtras)}">
+    ${approvalSelect("11. Aprovação do setor saúde do município", "aprova_saude_municipio", p.aprova_saude_municipio)}
+    ${approvalSelect("12. Aprovação do setor educação do município", "aprova_educacao_municipio", p.aprova_educacao_municipio)}
+    ${approvalSelect("13. Aprovação do setor de infraestrutura do município", "aprova_infraestrutura_municipio", p.aprova_infraestrutura_municipio)}
     <button type="submit" class="btn-salvar">Salvar alterações</button>
   </form>
   <form action="/excluir/${id}" method="post" onsubmit="return confirm('Tem certeza que deseja excluir esta pesquisa?');">

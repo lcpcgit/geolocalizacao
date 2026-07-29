@@ -1,7 +1,7 @@
 {
   "name": "Pesquisa de Opinião Pública 2026",
   "short_name": "Pesquisa",
-  "start_url": "/static/index.html",
+  "start_url": "/static/index.html?v=20260729-questionario-1",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#0f766e",

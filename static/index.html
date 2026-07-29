@@ -114,8 +114,8 @@
 
         <div class="linha">
             <div>
-                <label>Telefone</label>
-                <input type="tel" id="telefone" autocomplete="tel">
+                <label>Quantas pessoas moram na sua casa?</label>
+                <input type="number" id="moradores_casa" min="1" inputmode="numeric">
             </div>
             <div>
                 <label>Povoado ou bairro</label>
@@ -186,7 +186,22 @@
         </select>
 
         <h2>Intenção de Voto</h2>
-        <label>6. Em quem você votaria para governador na próxima eleição?</label>
+        <label>6. Em quem você votaria para presidente na próxima eleição?</label>
+        <select id="voto_presidente">
+            <option value="">Selecione</option>
+            <option value="Flavio Bolsonaro">Flavio Bolsonaro</option>
+            <option value="Lula">Lula</option>
+            <option value="Zema">Zema</option>
+            <option value="Caiado">Caiado</option>
+            <option value="Outros">Outros</option>
+            <option value="Não Sabe">Não Sabe</option>
+        </select>
+        <div id="presidente_outro_div" class="hidden">
+            <label>Informe outro nome para presidente</label>
+            <input type="text" id="voto_presidente_outro">
+        </div>
+
+        <label>7. Em quem você votaria para governador na próxima eleição?</label>
         <select id="voto_governador">
             <option value="">Selecione</option>
             <option value="Camarão">Camarão</option>
@@ -195,7 +210,7 @@
             <option value="Nenhum">Nenhum</option>
         </select>
 
-        <label>7. Em quem você votaria para deputado estadual na próxima eleição?</label>
+        <label>8. Em quem você votaria para deputado estadual na próxima eleição?</label>
         <select id="voto_deputado_estadual">
             <option value="">Selecione</option>
             <option value="Claudio Cunha">Claudio Cunha</option>
@@ -215,7 +230,7 @@
             <input type="text" id="voto_deputado_estadual_outro">
         </div>
 
-        <label>8. Em quem você votaria para deputado federal na próxima eleição?</label>
+        <label>9. Em quem você votaria para deputado federal na próxima eleição?</label>
         <select id="voto_deputado_federal">
             <option value="">Selecione</option>
             <option value="Aldir Junior">Aldir Junior</option>
@@ -234,7 +249,7 @@
         </div>
 
         <h2>Prioridades e Serviços</h2>
-        <label>9. O que o(a) senhor(a) espera que o(a) prefeito(a) faça no seu bairro/povoado?</label>
+        <label>10. O que o seu bairro/povoado mais precisa?</label>
         <div class="opcoes">
             <label><input type="checkbox" name="demandas" value="Água"> Água</label>
             <label><input type="checkbox" name="demandas" value="Estrada"> Estrada</label>
@@ -242,9 +257,12 @@
             <label><input type="checkbox" name="demandas" value="Posto de Saúde"> Posto de Saúde</label>
             <label><input type="checkbox" name="demandas" value="Praça"> Praça</label>
             <label><input type="checkbox" name="demandas" value="Iluminação Pública"> Iluminação Pública</label>
+            <label><input type="checkbox" name="demandas" value="Pavimentação"> Pavimentação</label>
         </div>
+        <label>Outros</label>
+        <input type="text" id="demandas_outros">
 
-        <label>10. Aprova ou não aprova o setor saúde do seu município?</label>
+        <label>11. Aprova ou não aprova o setor saúde do seu município?</label>
         <select id="aprova_saude_municipio">
             <option value="">Selecione</option>
             <option value="Aprova">Aprova</option>
@@ -252,7 +270,7 @@
             <option value="Não Sabe">Não Sabe</option>
         </select>
 
-        <label>11. Aprova ou não aprova o setor educação do seu município?</label>
+        <label>12. Aprova ou não aprova o setor educação do seu município?</label>
         <select id="aprova_educacao_municipio">
             <option value="">Selecione</option>
             <option value="Aprova">Aprova</option>
@@ -260,8 +278,8 @@
             <option value="Não Sabe">Não Sabe</option>
         </select>
 
-        <label>12. Aprova ou não aprova o setor estradas do seu município?</label>
-        <select id="aprova_estradas_municipio">
+        <label>13. Aprova ou não aprova o setor de infraestrutura do seu município?</label>
+        <select id="aprova_infraestrutura_municipio">
             <option value="">Selecione</option>
             <option value="Aprova">Aprova</option>
             <option value="Não Aprova">Não Aprova</option>
@@ -319,14 +337,19 @@
         }
 
         document.getElementById('religiao').addEventListener('change', () => toggleCampoOutro('religiao', 'religiao_outra_div'));
+        document.getElementById('voto_presidente').addEventListener('change', () => toggleCampoOutro('voto_presidente', 'presidente_outro_div'));
         document.getElementById('voto_deputado_estadual').addEventListener('change', () => toggleCampoOutro('voto_deputado_estadual', 'estadual_outro_div'));
         document.getElementById('voto_deputado_federal').addEventListener('change', () => toggleCampoOutro('voto_deputado_federal', 'federal_outro_div'));
 
         function montarDados() {
+            const demandas = valoresMarcados('demandas');
+            const demandaOutra = valor('demandas_outros');
+            if (demandaOutra) demandas.push(demandaOutra);
+
             return {
                 identificacao: {
                     nome: valor('nome'),
-                    telefone: valor('telefone'),
+                    moradores_casa: valor('moradores_casa'),
                     povoado_bairro: valor('povoado_bairro'),
                     endereco_rua: valor('endereco_rua'),
                     numero: valor('numero')
@@ -337,13 +360,14 @@
                     governo_lula: valor('governo_lula'),
                     governo_brandao: valor('governo_brandao'),
                     governo_dino_penha: valor('governo_dino_penha'),
+                    voto_presidente: valorSelectComOutro('voto_presidente', 'voto_presidente_outro'),
                     voto_governador: valor('voto_governador'),
                     voto_deputado_estadual: valorSelectComOutro('voto_deputado_estadual', 'voto_deputado_estadual_outro'),
                     voto_deputado_federal: valorSelectComOutro('voto_deputado_federal', 'voto_deputado_federal_outro'),
-                    demandas_bairro_povoado: valoresMarcados('demandas'),
+                    demandas_bairro_povoado: demandas,
                     aprova_saude_municipio: valor('aprova_saude_municipio'),
                     aprova_educacao_municipio: valor('aprova_educacao_municipio'),
-                    aprova_estradas_municipio: valor('aprova_estradas_municipio')
+                    aprova_infraestrutura_municipio: valor('aprova_infraestrutura_municipio')
                 },
                 localizacao: { latitude: null, longitude: null }
             };

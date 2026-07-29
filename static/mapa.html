@@ -93,6 +93,7 @@
         </select>
 
         <h4>Intenção de voto</h4>
+        <label>Presidente</label><input type="text" id="f_presidente" oninput="filtrar()">
         <label>Governador</label><input type="text" id="f_governador" oninput="filtrar()">
         <label>Deputado estadual</label><input type="text" id="f_estadual" oninput="filtrar()">
         <label>Deputado federal</label><input type="text" id="f_federal" oninput="filtrar()">
@@ -107,6 +108,7 @@
             <option value="Posto de Saúde">Posto de Saúde</option>
             <option value="Praça">Praça</option>
             <option value="Iluminação Pública">Iluminação Pública</option>
+            <option value="Pavimentação">Pavimentação</option>
         </select>
 
         <button class="btn-limpar" onclick="limparFiltros()">Limpar filtros</button>
@@ -210,6 +212,7 @@
                         <strong style="font-size: 15px; color: #0f766e;">${escapeHtml(identificacao.nome)}</strong><br>
                         <span>${escapeHtml(identificacao.povoado_bairro)}</span>
                         <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 7px 0;">
+                        <b>Presidente:</b> ${escapeHtml(pesquisa.voto_presidente)}<br>
                         <b>Governador:</b> ${escapeHtml(pesquisa.voto_governador)}<br>
                         <b>Dep. estadual:</b> ${escapeHtml(pesquisa.voto_deputado_estadual)}<br>
                         <b>Dep. federal:</b> ${escapeHtml(pesquisa.voto_deputado_federal)}<br>
@@ -243,6 +246,7 @@
             const fReligiao = texto(document.getElementById('f_religiao').value);
             const fLula = document.getElementById('f_lula').value;
             const fBrandao = document.getElementById('f_brandao').value;
+            const fPresidente = texto(document.getElementById('f_presidente').value);
             const fGovernador = texto(document.getElementById('f_governador').value);
             const fEstadual = texto(document.getElementById('f_estadual').value);
             const fFederal = texto(document.getElementById('f_federal').value);
@@ -262,6 +266,7 @@
                     (!fReligiao || texto(pesquisa.religiao).includes(fReligiao)) &&
                     (!fLula || pesquisa.governo_lula === fLula) &&
                     (!fBrandao || pesquisa.governo_brandao === fBrandao) &&
+                    (!fPresidente || texto(pesquisa.voto_presidente).includes(fPresidente)) &&
                     (!fGovernador || texto(pesquisa.voto_governador).includes(fGovernador)) &&
                     (!fEstadual || texto(pesquisa.voto_deputado_estadual).includes(fEstadual)) &&
                     (!fFederal || texto(pesquisa.voto_deputado_federal).includes(fFederal)) &&
