@@ -27,7 +27,7 @@
     }
   ],
   "vars": {
-    "APP_VERSION": "20260805-perfis-voto",
+    "APP_VERSION": "20260805-apoio-prefeito",
     "EXIGIR_SENHA": "false",
     "SENHA_SISTEMA": "Lucasph12345"
   }

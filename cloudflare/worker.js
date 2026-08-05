@@ -1,6 +1,6 @@
 const COOKIE_NAME = "sessao_usuario";
 const COOKIE_VALUE = "acesso_liberado_ok";
-const APP_VERSION_FALLBACK = "20260805-perfis-voto";
+const APP_VERSION_FALLBACK = "20260805-apoio-prefeito";
 
 const CAMPOS_IDENTIFICACAO = ["nome", "moradores_casa", "povoado_bairro", "endereco_rua", "numero"];
 const CAMPOS_PESQUISA = [
@@ -13,9 +13,7 @@ const CAMPOS_PESQUISA = [
   "voto_governador",
   "voto_deputado_estadual",
   "voto_deputado_federal",
-  "perfil_candidato_voto",
   "influencia_apoio_prefeito",
-  "voto_deputado_cenario",
   "aprova_saude_municipio",
   "aprova_educacao_municipio",
   "aprova_infraestrutura_municipio"
@@ -137,9 +135,7 @@ function normalizarDados(dados = {}) {
       voto_governador: "",
       voto_deputado_estadual: "",
       voto_deputado_federal: "",
-      perfil_candidato_voto: "",
       influencia_apoio_prefeito: "",
-      voto_deputado_cenario: "",
       demandas_bairro_povoado: [],
       aprova_saude_municipio: "",
       aprova_educacao_municipio: "",
@@ -322,8 +318,8 @@ async function exportarCsv(env) {
     "Data/Hora", "Latitude", "Longitude", "Nome", "Pessoas na Casa", "Povoado/Bairro",
     "Endereco/Rua", "Numero", "Ocupacao", "Religiao", "Governo Lula",
     "Governo Brandao", "Governo Dino Penha", "Voto Presidente", "Voto Governador",
-    "Voto Deputado Estadual", "Voto Deputado Federal", "Perfil de Candidato",
-    "Influencia Apoio do Prefeito", "Cenario Voto Deputado", "Demandas Bairro/Povoado",
+    "Voto Deputado Estadual", "Voto Deputado Federal", "Influencia Apoio do Prefeito",
+    "Demandas Bairro/Povoado",
     "Aprova Saude Municipio", "Aprova Educacao Municipio", "Aprova Infraestrutura Municipio"
   ];
 
@@ -338,7 +334,7 @@ async function exportarCsv(env) {
       i.endereco_rua, i.numero, p.ocupacao, p.religiao, p.governo_lula,
       p.governo_brandao, p.governo_dino_penha, p.voto_presidente, p.voto_governador,
       p.voto_deputado_estadual, p.voto_deputado_federal,
-      p.perfil_candidato_voto, p.influencia_apoio_prefeito, p.voto_deputado_cenario,
+      p.influencia_apoio_prefeito,
       p.demandas_bairro_povoado.join(", "), p.aprova_saude_municipio,
       p.aprova_educacao_municipio, p.aprova_infraestrutura_municipio
     ]);
@@ -438,18 +434,16 @@ function renderFicha(id, dados) {
     <label>7. Governador</label><input name="voto_governador" value="${escapeHtml(p.voto_governador)}">
     <label>8. Deputado estadual</label><input name="voto_deputado_estadual" value="${escapeHtml(p.voto_deputado_estadual)}">
     <label>9. Deputado federal</label><input name="voto_deputado_federal" value="${escapeHtml(p.voto_deputado_federal)}">
-    <label>10. Perfil de candidato que mais combina com o voto</label><input name="perfil_candidato_voto" value="${escapeHtml(p.perfil_candidato_voto)}">
-    <label>11. Influência do apoio do prefeito</label><input name="influencia_apoio_prefeito" value="${escapeHtml(p.influencia_apoio_prefeito)}">
-    <label>12. Cenário mais próximo do voto para deputado</label><input name="voto_deputado_cenario" value="${escapeHtml(p.voto_deputado_cenario)}">
+    <label>10. Influência do apoio do prefeito</label><input name="influencia_apoio_prefeito" value="${escapeHtml(p.influencia_apoio_prefeito)}">
     <h2>Prioridades e Serviços</h2>
-    <label>13. O que o bairro/povoado mais precisa?</label>
+    <label>11. O que o bairro/povoado mais precisa?</label>
     <div class="opcoes">
       ${DEMANDAS.map((demanda) => `<label><input type="checkbox" name="demandas_bairro_povoado" value="${escapeHtml(demanda)}" ${checked(demandas, demanda)}> ${escapeHtml(demanda)}</label>`).join("")}
     </div>
     <label>Outros</label><input name="demandas_outros" value="${escapeHtml(demandasExtras)}">
-    ${approvalSelect("14. Aprovação do setor saúde do município", "aprova_saude_municipio", p.aprova_saude_municipio)}
-    ${approvalSelect("15. Aprovação do setor educação do município", "aprova_educacao_municipio", p.aprova_educacao_municipio)}
-    ${approvalSelect("16. Aprovação do setor de infraestrutura do município", "aprova_infraestrutura_municipio", p.aprova_infraestrutura_municipio)}
+    ${approvalSelect("12. Aprovação do setor saúde do município", "aprova_saude_municipio", p.aprova_saude_municipio)}
+    ${approvalSelect("13. Aprovação do setor educação do município", "aprova_educacao_municipio", p.aprova_educacao_municipio)}
+    ${approvalSelect("14. Aprovação do setor de infraestrutura do município", "aprova_infraestrutura_municipio", p.aprova_infraestrutura_municipio)}
     <button type="submit" class="btn-salvar">Salvar alterações</button>
   </form>
   <form action="/excluir/${id}" method="post" onsubmit="return confirm('Tem certeza que deseja excluir esta pesquisa?');">
