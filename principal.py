@@ -17,7 +17,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.getenv("DB_PATH", os.path.join(BASE_DIR, "dados.db"))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
-APP_VERSION = "20260729-questionario-1"
+APP_VERSION = "20260805-perfis-voto"
 LIMITES_BRASIL = {
     "min_lat": -34,
     "max_lat": 6,
@@ -141,6 +141,9 @@ def normalizar_dados_pesquisa(dados: Dict[str, Any]) -> Dict[str, Any]:
         "voto_governador": "",
         "voto_deputado_estadual": "",
         "voto_deputado_federal": "",
+        "perfil_candidato_voto": "",
+        "influencia_apoio_prefeito": "",
+        "voto_deputado_cenario": "",
         "demandas_bairro_povoado": [],
         "aprova_saude_municipio": "",
         "aprova_educacao_municipio": "",
@@ -262,6 +265,9 @@ async def atualizar(id_resposta: int, request: Request):
             "voto_governador": form_data.get("voto_governador", ""),
             "voto_deputado_estadual": form_data.get("voto_deputado_estadual", ""),
             "voto_deputado_federal": form_data.get("voto_deputado_federal", ""),
+            "perfil_candidato_voto": form_data.get("perfil_candidato_voto", ""),
+            "influencia_apoio_prefeito": form_data.get("influencia_apoio_prefeito", ""),
+            "voto_deputado_cenario": form_data.get("voto_deputado_cenario", ""),
             "demandas_bairro_povoado": demandas,
             "aprova_saude_municipio": form_data.get("aprova_saude_municipio", ""),
             "aprova_educacao_municipio": form_data.get("aprova_educacao_municipio", ""),
@@ -295,6 +301,7 @@ def exportar_excel():
         "Povoado/Bairro", "Endereco/Rua", "Numero", "Ocupacao", "Religiao",
         "Governo Lula", "Governo Brandao", "Governo Dino Penha",
         "Voto Presidente", "Voto Governador", "Voto Deputado Estadual", "Voto Deputado Federal",
+        "Perfil de Candidato", "Influencia Apoio do Prefeito", "Cenario Voto Deputado",
         "Demandas Bairro/Povoado", "Aprova Saude Municipio",
         "Aprova Educacao Municipio", "Aprova Infraestrutura Municipio"
     ]
@@ -320,7 +327,8 @@ def exportar_excel():
                 pesquisa.get("religiao", ""), pesquisa.get("governo_lula", ""),
                 pesquisa.get("governo_brandao", ""), pesquisa.get("governo_dino_penha", ""),
                 pesquisa.get("voto_presidente", ""), pesquisa.get("voto_governador", ""), pesquisa.get("voto_deputado_estadual", ""),
-                pesquisa.get("voto_deputado_federal", ""), txt_demandas,
+                pesquisa.get("voto_deputado_federal", ""), pesquisa.get("perfil_candidato_voto", ""),
+                pesquisa.get("influencia_apoio_prefeito", ""), pesquisa.get("voto_deputado_cenario", ""), txt_demandas,
                 pesquisa.get("aprova_saude_municipio", ""),
                 pesquisa.get("aprova_educacao_municipio", ""),
                 pesquisa.get("aprova_infraestrutura_municipio", "")

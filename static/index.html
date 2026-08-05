@@ -248,8 +248,35 @@
             <input type="text" id="voto_deputado_federal_outro">
         </div>
 
+        <label>10. Pensando nesta eleição, qual destes perfis de candidato mais combina com seu voto?</label>
+        <select id="perfil_candidato_voto">
+            <option value="">Selecione</option>
+            <option value="Candidato apoiado pela atual gestão municipal">Candidato apoiado pela atual gestão municipal</option>
+            <option value="Candidato da oposição">Candidato da oposição</option>
+            <option value="Candidato independente">Candidato independente</option>
+            <option value="Ainda não decidiu">Ainda não decidiu</option>
+        </select>
+
+        <label>11. O apoio do prefeito a um candidato influencia sua decisão de voto?</label>
+        <select id="influencia_apoio_prefeito">
+            <option value="">Selecione</option>
+            <option value="Influencia muito">Influencia muito</option>
+            <option value="Influencia um pouco">Influencia um pouco</option>
+            <option value="Não influencia">Não influencia</option>
+            <option value="Depende do candidato">Depende do candidato</option>
+        </select>
+
+        <label>12. Se hoje houvesse uma eleição para deputado, qual destas opções estaria mais próxima do seu voto?</label>
+        <select id="voto_deputado_cenario">
+            <option value="">Selecione</option>
+            <option value="Um candidato apoiado pelo prefeito">Um candidato apoiado pelo prefeito</option>
+            <option value="Um candidato da oposição">Um candidato da oposição</option>
+            <option value="Ainda não decidiu">Ainda não decidiu</option>
+            <option value="Prefere não responder">Prefere não responder</option>
+        </select>
+
         <h2>Prioridades e Serviços</h2>
-        <label>10. O que o seu bairro/povoado mais precisa?</label>
+        <label>13. O que o seu bairro/povoado mais precisa?</label>
         <div class="opcoes">
             <label><input type="checkbox" name="demandas" value="Água"> Água</label>
             <label><input type="checkbox" name="demandas" value="Estrada"> Estrada</label>
@@ -262,7 +289,7 @@
         <label>Outros</label>
         <input type="text" id="demandas_outros">
 
-        <label>11. Aprova ou não aprova o setor saúde do seu município?</label>
+        <label>14. Aprova ou não aprova o setor saúde do seu município?</label>
         <select id="aprova_saude_municipio">
             <option value="">Selecione</option>
             <option value="Aprova">Aprova</option>
@@ -270,7 +297,7 @@
             <option value="Não Sabe">Não Sabe</option>
         </select>
 
-        <label>12. Aprova ou não aprova o setor educação do seu município?</label>
+        <label>15. Aprova ou não aprova o setor educação do seu município?</label>
         <select id="aprova_educacao_municipio">
             <option value="">Selecione</option>
             <option value="Aprova">Aprova</option>
@@ -278,7 +305,7 @@
             <option value="Não Sabe">Não Sabe</option>
         </select>
 
-        <label>13. Aprova ou não aprova o setor de infraestrutura do seu município?</label>
+        <label>16. Aprova ou não aprova o setor de infraestrutura do seu município?</label>
         <select id="aprova_infraestrutura_municipio">
             <option value="">Selecione</option>
             <option value="Aprova">Aprova</option>
@@ -364,6 +391,9 @@
                     voto_governador: valor('voto_governador'),
                     voto_deputado_estadual: valorSelectComOutro('voto_deputado_estadual', 'voto_deputado_estadual_outro'),
                     voto_deputado_federal: valorSelectComOutro('voto_deputado_federal', 'voto_deputado_federal_outro'),
+                    perfil_candidato_voto: valor('perfil_candidato_voto'),
+                    influencia_apoio_prefeito: valor('influencia_apoio_prefeito'),
+                    voto_deputado_cenario: valor('voto_deputado_cenario'),
                     demandas_bairro_povoado: demandas,
                     aprova_saude_municipio: valor('aprova_saude_municipio'),
                     aprova_educacao_municipio: valor('aprova_educacao_municipio'),

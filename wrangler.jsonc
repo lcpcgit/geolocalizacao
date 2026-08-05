@@ -27,7 +27,7 @@
     }
   ],
   "vars": {
-    "APP_VERSION": "20260729-questionario-1",
+    "APP_VERSION": "20260805-perfis-voto",
     "EXIGIR_SENHA": "false",
     "SENHA_SISTEMA": "Lucasph12345"
   }
