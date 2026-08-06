@@ -17,7 +17,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.getenv("DB_PATH", os.path.join(BASE_DIR, "dados.db"))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
-APP_VERSION = "20260805-apoio-prefeito"
+APP_VERSION = "20260806-anti-duplicacao"
 LIMITES_BRASIL = {
     "min_lat": -34,
     "max_lat": 6,
@@ -91,9 +91,17 @@ def criar_tabela():
             data_hora TEXT,
             latitude REAL,
             longitude REAL,
+            client_id TEXT,
             dados_json TEXT
         )
     """)
+    try:
+        cursor.execute("ALTER TABLE respostas ADD COLUMN client_id TEXT")
+    except sqlite3.OperationalError as exc:
+        if "duplicate column" not in str(exc).lower():
+            conn.close()
+            raise
+    cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_respostas_client_id ON respostas(client_id)")
     conn.commit()
     conn.close()
 
@@ -115,11 +123,13 @@ class Localizacao(BaseModel):
     longitude: Optional[float] = None
 
 class Dados(BaseModel):
+    client_id: Optional[str] = None
     identificacao: Dict[str, Any]
     pesquisa: Dict[str, Any]
     localizacao: Localizacao
 
 def normalizar_dados_pesquisa(dados: Dict[str, Any]) -> Dict[str, Any]:
+    dados.setdefault("client_id", "")
     dados.setdefault("identificacao", {})
     dados.setdefault("pesquisa", {})
     dados.setdefault("localizacao", {"latitude": None, "longitude": None})
@@ -372,16 +382,23 @@ def coletar(dados: Dados):
     latitude, longitude = normalizar_coordenadas(dados.localizacao.latitude, dados.localizacao.longitude)
     payload["localizacao"]["latitude"] = latitude
     payload["localizacao"]["longitude"] = longitude
+    client_id = str(payload.get("client_id") or "").strip() or None
 
-    cursor.execute("""
-        INSERT INTO respostas (data_hora, latitude, longitude, dados_json)
-        VALUES (?, ?, ?, ?)
-    """, (
-        datetime.now().isoformat(),
-        latitude,
-        longitude,
-        json.dumps(payload, ensure_ascii=False)
-    ))
+    try:
+        cursor.execute("""
+            INSERT INTO respostas (data_hora, latitude, longitude, client_id, dados_json)
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            datetime.now().isoformat(),
+            latitude,
+            longitude,
+            client_id,
+            json.dumps(payload, ensure_ascii=False)
+        ))
+    except sqlite3.IntegrityError:
+        conn.close()
+        return {"status": "ok", "duplicated": True}
+
     conn.commit()
     conn.close()
     return {"status": "ok"}

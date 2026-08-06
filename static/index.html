@@ -305,6 +305,7 @@
 
     <script>
         let db = null;
+        let envioEmAndamento = false;
         const statusBar = document.getElementById('status-bar');
         const DB_NAME = "pesquisa_eleitoral_db";
         const STORE_NAME = "respostas";
@@ -345,6 +346,29 @@
             document.getElementById(divId).style.display = (selecionado === "Outra" || selecionado === "Outros") ? "block" : "none";
         }
 
+        function gerarClientId() {
+            if (window.crypto && typeof window.crypto.randomUUID === "function") {
+                return window.crypto.randomUUID();
+            }
+            return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        }
+
+        function iniciarEnvio() {
+            if (envioEmAndamento) return false;
+            envioEmAndamento = true;
+            const btnEnviar = document.getElementById('btn-enviar');
+            btnEnviar.disabled = true;
+            btnEnviar.innerText = "Enviando...";
+            return true;
+        }
+
+        function finalizarEnvio() {
+            envioEmAndamento = false;
+            const btnEnviar = document.getElementById('btn-enviar');
+            btnEnviar.disabled = false;
+            btnEnviar.innerText = "Enviar dados";
+        }
+
         document.getElementById('religiao').addEventListener('change', () => toggleCampoOutro('religiao', 'religiao_outra_div'));
         document.getElementById('voto_presidente').addEventListener('change', () => toggleCampoOutro('voto_presidente', 'presidente_outro_div'));
         document.getElementById('voto_deputado_estadual').addEventListener('change', () => toggleCampoOutro('voto_deputado_estadual', 'estadual_outro_div'));
@@ -356,6 +380,7 @@
             if (demandaOutra) demandas.push(demandaOutra);
 
             return {
+                client_id: gerarClientId(),
                 identificacao: {
                     nome: valor('nome'),
                     moradores_casa: valor('moradores_casa'),
@@ -395,6 +420,8 @@
                 return;
             }
 
+            if (!iniciarEnvio()) return;
+
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
@@ -419,6 +446,7 @@
         function continuarSemLocalizacao(dados) {
             const salvar = confirm("Nao foi possivel pegar a localizacao. Salvar mesmo assim? Sem localizacao, esta ficha nao aparece no mapa.");
             if (salvar) processarEnvio(dados);
+            else finalizarEnvio();
         }
 
         function coordenadaValidaBrasil(lat, lng) {
@@ -443,6 +471,7 @@
                 if (!res.redirected && res.ok && resultado && resultado.status === "ok") {
                     alert("Enviado com sucesso!");
                     limparFormulario();
+                    finalizarEnvio();
                 } else {
                     salvarOffline(dados);
                 }
@@ -453,6 +482,7 @@
         function salvarOffline(dados) {
             if (!db) {
                 alert("Armazenamento offline ainda carregando. Tente enviar novamente em alguns segundos.");
+                finalizarEnvio();
                 return;
             }
 
@@ -462,10 +492,21 @@
             tx.oncomplete = function() {
                 alert("Sem internet: cadastro salvo no aparelho. Sincronize quando tiver sinal.");
                 limparFormulario();
+                finalizarEnvio();
             };
             tx.onerror = function() {
                 alert("Não foi possível salvar offline. Verifique o armazenamento do aparelho.");
+                finalizarEnvio();
             };
+        }
+
+        function deletarPendente(id) {
+            return new Promise((resolve, reject) => {
+                const txDel = db.transaction(STORE_NAME, "readwrite");
+                txDel.oncomplete = resolve;
+                txDel.onerror = () => reject(txDel.error);
+                txDel.objectStore(STORE_NAME).delete(id);
+            });
         }
 
         async function sincronizar() {
@@ -498,6 +539,7 @@
                 let sucessos = 0;
                 for (let item of registros) {
                     try {
+                        if (!item.dados.client_id) item.dados.client_id = gerarClientId();
                         const response = await fetch("/coletar", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
@@ -505,8 +547,7 @@
                         });
                         const resultado = await response.json().catch(() => null);
                         if (!response.redirected && response.ok && resultado && resultado.status === "ok") {
-                            const txDel = db.transaction(STORE_NAME, "readwrite");
-                            txDel.objectStore(STORE_NAME).delete(item.id);
+                            await deletarPendente(item.id);
                             sucessos++;
                         }
                     } catch (e) {

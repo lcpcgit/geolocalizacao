@@ -1,6 +1,6 @@
 const COOKIE_NAME = "sessao_usuario";
 const COOKIE_VALUE = "acesso_liberado_ok";
-const APP_VERSION_FALLBACK = "20260805-apoio-prefeito";
+const APP_VERSION_FALLBACK = "20260806-anti-duplicacao";
 
 const CAMPOS_IDENTIFICACAO = ["nome", "moradores_casa", "povoado_bairro", "endereco_rua", "numero"];
 const CAMPOS_PESQUISA = [
@@ -107,9 +107,22 @@ async function ensureSchema(env) {
       data_hora TEXT,
       latitude REAL,
       longitude REAL,
+      client_id TEXT,
       dados_json TEXT
     )
   `).run();
+  await adicionarColunaSeNaoExistir(env, "ALTER TABLE respostas ADD COLUMN client_id TEXT");
+  await env.DB.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_respostas_client_id ON respostas(client_id)").run();
+}
+
+async function adicionarColunaSeNaoExistir(env, sql) {
+  try {
+    await env.DB.prepare(sql).run();
+  } catch (error) {
+    if (!String(error && error.message).toLowerCase().includes("duplicate column")) {
+      throw error;
+    }
+  }
 }
 
 function normalizarDados(dados = {}) {
@@ -118,6 +131,7 @@ function normalizarDados(dados = {}) {
   const localizacao = dados.localizacao || {};
 
   const normalizado = {
+    client_id: stringValue(dados.client_id || dados.clientId || "").trim(),
     identificacao: {
       nome: "",
       moradores_casa: "",
@@ -243,11 +257,19 @@ async function coletar(request, env) {
   const { latitude, longitude } = normalizarCoordenadas(dados.localizacao.latitude, dados.localizacao.longitude);
   dados.localizacao.latitude = latitude;
   dados.localizacao.longitude = longitude;
+  const clientId = dados.client_id || null;
 
-  await env.DB.prepare(`
-    INSERT INTO respostas (data_hora, latitude, longitude, dados_json)
-    VALUES (?, ?, ?, ?)
-  `).bind(new Date().toISOString(), latitude, longitude, JSON.stringify(dados)).run();
+  try {
+    await env.DB.prepare(`
+      INSERT INTO respostas (data_hora, latitude, longitude, client_id, dados_json)
+      VALUES (?, ?, ?, ?, ?)
+    `).bind(new Date().toISOString(), latitude, longitude, clientId, JSON.stringify(dados)).run();
+  } catch (error) {
+    if (clientId && String(error && error.message).toLowerCase().includes("unique")) {
+      return json({ status: "ok", duplicated: true });
+    }
+    throw error;
+  }
 
   return json({ status: "ok" });
 }

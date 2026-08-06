@@ -1,10 +1,10 @@
-const CACHE_NAME = 'pesquisa-opiniao-v8';
+const CACHE_NAME = 'pesquisa-opiniao-v9';
 
 const OFFLINE_PAGE = '/static/index.html';
 const ASSETS = [
     '/',
     OFFLINE_PAGE,
-    '/static/index.html?v=20260805-apoio-prefeito',
+    '/static/index.html?v=20260806-anti-duplicacao',
     '/static/mapa.html',
     '/static/manifest.json',
     '/service-worker.js'
