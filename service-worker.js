@@ -1,10 +1,10 @@
-const CACHE_NAME = 'pesquisa-opiniao-v10';
+const CACHE_NAME = 'pesquisa-opiniao-v11';
 
 const OFFLINE_PAGE = '/static/index.html';
 const ASSETS = [
     '/',
     OFFLINE_PAGE,
-    '/static/index.html?v=20260806-anti-duplicacao-v2',
+    '/static/index.html?v=20260806-ocupacao-outra',
     '/static/mapa.html',
     '/static/manifest.json',
     '/service-worker.js'

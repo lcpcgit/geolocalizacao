@@ -27,7 +27,7 @@
     }
   ],
   "vars": {
-    "APP_VERSION": "20260806-anti-duplicacao-v2",
+    "APP_VERSION": "20260806-ocupacao-outra",
     "EXIGIR_SENHA": "false",
     "SENHA_SISTEMA": "Lucasph12345"
   }

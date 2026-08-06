@@ -144,7 +144,12 @@
             <option value="Empregado Assalariado">Empregado Assalariado</option>
             <option value="Trabalhador Autônomo">Trabalhador Autônomo</option>
             <option value="Trabalhador Rural">Trabalhador Rural</option>
+            <option value="Outra">Outra</option>
         </select>
+        <div id="ocupacao_outra_div" class="hidden">
+            <label>Especifique a ocupação</label>
+            <input type="text" id="ocupacao_outra">
+        </div>
 
         <label>2. Qual a sua religião?</label>
         <select id="religiao">
@@ -376,6 +381,7 @@
             btnEnviar.innerText = "Enviar dados";
         }
 
+        document.getElementById('ocupacao').addEventListener('change', () => toggleCampoOutro('ocupacao', 'ocupacao_outra_div'));
         document.getElementById('religiao').addEventListener('change', () => toggleCampoOutro('religiao', 'religiao_outra_div'));
         document.getElementById('voto_presidente').addEventListener('change', () => toggleCampoOutro('voto_presidente', 'presidente_outro_div'));
         document.getElementById('voto_deputado_estadual').addEventListener('change', () => toggleCampoOutro('voto_deputado_estadual', 'estadual_outro_div'));
@@ -396,7 +402,7 @@
                     numero: valor('numero')
                 },
                 pesquisa: {
-                    ocupacao: valor('ocupacao'),
+                    ocupacao: valorSelectComOutro('ocupacao', 'ocupacao_outra'),
                     religiao: valorSelectComOutro('religiao', 'religiao_outra'),
                     governo_lula: valor('governo_lula'),
                     governo_brandao: valor('governo_brandao'),
