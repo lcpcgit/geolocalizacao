@@ -1,6 +1,6 @@
 const COOKIE_NAME = "sessao_usuario";
 const COOKIE_VALUE = "acesso_liberado_ok";
-const APP_VERSION_FALLBACK = "20260806-anti-duplicacao";
+const APP_VERSION_FALLBACK = "20260806-anti-duplicacao-v2";
 
 const CAMPOS_IDENTIFICACAO = ["nome", "moradores_casa", "povoado_bairro", "endereco_rua", "numero"];
 const CAMPOS_PESQUISA = [

@@ -353,6 +353,13 @@
             return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
         }
 
+        function fingerprintPesquisa(dados) {
+            return JSON.stringify({
+                identificacao: dados.identificacao || {},
+                pesquisa: dados.pesquisa || {}
+            });
+        }
+
         function iniciarEnvio() {
             if (envioEmAndamento) return false;
             envioEmAndamento = true;
@@ -537,8 +544,18 @@
                 }
 
                 let sucessos = 0;
+                let duplicadosLocais = 0;
+                const vistos = new Set();
                 for (let item of registros) {
                     try {
+                        const fingerprint = fingerprintPesquisa(item.dados);
+                        if (vistos.has(fingerprint)) {
+                            await deletarPendente(item.id);
+                            duplicadosLocais++;
+                            continue;
+                        }
+                        vistos.add(fingerprint);
+
                         if (!item.dados.client_id) item.dados.client_id = gerarClientId();
                         const response = await fetch("/coletar", {
                             method: "POST",
@@ -555,7 +572,7 @@
                     }
                 }
 
-                alert(`Sincronização concluída!\nEnviados: ${sucessos}`);
+                alert(`Sincronização concluída!\nEnviados: ${sucessos}\nDuplicados ignorados: ${duplicadosLocais}`);
                 btnSync.disabled = false;
                 btnSync.innerText = "Sincronizar dados pendentes";
                 verificarPendencias();
