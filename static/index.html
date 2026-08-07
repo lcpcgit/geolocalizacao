@@ -314,6 +314,8 @@
         const statusBar = document.getElementById('status-bar');
         const DB_NAME = "pesquisa_eleitoral_db";
         const STORE_NAME = "respostas";
+        const BACKUP_KEY = "pesquisa_eleitoral_backup_v1";
+        const MAX_BACKUP_REGISTROS = 1000;
 
         const request = indexedDB.open(DB_NAME, 1);
         request.onupgradeneeded = function (event) {
@@ -324,10 +326,12 @@
         };
         request.onsuccess = function (event) {
             db = event.target.result;
-            verificarPendencias();
+            solicitarArmazenamentoPersistente();
+            restaurarBackupOffline().finally(verificarPendencias);
         };
         request.onerror = function () {
-            alert("Não foi possível abrir o armazenamento offline deste aparelho.");
+            alert("Nao foi possivel abrir o armazenamento principal offline. O app vai tentar usar o backup local deste aparelho.");
+            verificarPendencias();
         };
 
         function valor(id) {
@@ -363,6 +367,152 @@
                 identificacao: dados.identificacao || {},
                 pesquisa: dados.pesquisa || {}
             });
+        }
+
+        function solicitarArmazenamentoPersistente() {
+            if (!navigator.storage || typeof navigator.storage.persist !== "function") return;
+            navigator.storage.persist().catch(() => {});
+        }
+
+        function normalizarRegistroBackup(item) {
+            if (!item) return null;
+            if (item.dados) {
+                return {
+                    dados: item.dados,
+                    data: item.data || new Date().toISOString(),
+                    backupOnly: true
+                };
+            }
+            return {
+                dados: item,
+                data: new Date().toISOString(),
+                backupOnly: true
+            };
+        }
+
+        function carregarBackupLocal() {
+            try {
+                const conteudo = localStorage.getItem(BACKUP_KEY);
+                if (!conteudo) return [];
+                const registros = JSON.parse(conteudo);
+                if (!Array.isArray(registros)) return [];
+                return registros.map(normalizarRegistroBackup).filter(Boolean);
+            } catch (error) {
+                console.warn("Nao foi possivel ler o backup offline.", error);
+                return [];
+            }
+        }
+
+        function salvarBackupLocal(registros) {
+            try {
+                const limpos = registros
+                    .map(normalizarRegistroBackup)
+                    .filter(Boolean)
+                    .slice(-MAX_BACKUP_REGISTROS)
+                    .map(item => ({ dados: item.dados, data: item.data }));
+                localStorage.setItem(BACKUP_KEY, JSON.stringify(limpos));
+                return true;
+            } catch (error) {
+                console.error("Nao foi possivel salvar o backup offline.", error);
+                return false;
+            }
+        }
+
+        function chavesComparacaoPendente(registro) {
+            const dados = registro && registro.dados ? registro.dados : registro;
+            if (!dados) return [];
+            const chaves = [];
+            if (dados.client_id) chaves.push(`id:${dados.client_id}`);
+            try {
+                chaves.push(`fp:${fingerprintPesquisa(dados)}`);
+            } catch (error) {
+                console.warn("Nao foi possivel gerar a chave de comparacao.", error);
+            }
+            return chaves;
+        }
+
+        function salvarBackupPendente(dados, data = new Date().toISOString()) {
+            if (!dados.client_id) dados.client_id = gerarClientId();
+            const chavesAtuais = new Set(chavesComparacaoPendente({ dados }));
+            const registros = carregarBackupLocal().filter(item => {
+                return !chavesComparacaoPendente(item).some(chave => chavesAtuais.has(chave));
+            });
+            registros.push({ dados, data });
+            return salvarBackupLocal(registros);
+        }
+
+        function removerBackupPendente(registro, removerPorFingerprint = false) {
+            const dados = registro && registro.dados ? registro.dados : registro;
+            if (!dados) return;
+            const chavesAlvo = chavesComparacaoPendente(registro);
+            const idAlvo = chavesAlvo.find(chave => chave.startsWith("id:"));
+            const fingerprintAlvo = chavesAlvo.find(chave => chave.startsWith("fp:"));
+            const registros = carregarBackupLocal().filter(item => {
+                const chaves = chavesComparacaoPendente(item);
+                if (idAlvo && chaves.includes(idAlvo)) return false;
+                if (removerPorFingerprint && fingerprintAlvo && chaves.includes(fingerprintAlvo)) return false;
+                if (!idAlvo && fingerprintAlvo && chaves.includes(fingerprintAlvo)) return false;
+                return true;
+            });
+            salvarBackupLocal(registros);
+        }
+
+        function salvarIndexedDB(registro) {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    reject(new Error("Banco offline indisponivel."));
+                    return;
+                }
+                const tx = db.transaction(STORE_NAME, "readwrite");
+                tx.oncomplete = resolve;
+                tx.onerror = () => reject(tx.error || new Error("Falha ao gravar no banco offline."));
+                tx.objectStore(STORE_NAME).add(registro);
+            });
+        }
+
+        function listarPendentesIndexedDB() {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    resolve([]);
+                    return;
+                }
+                const tx = db.transaction(STORE_NAME, "readonly");
+                const store = tx.objectStore(STORE_NAME);
+                const allRecords = store.getAll();
+                allRecords.onsuccess = () => resolve(allRecords.result || []);
+                allRecords.onerror = () => reject(allRecords.error || new Error("Falha ao listar pendencias."));
+            });
+        }
+
+        async function restaurarBackupOffline() {
+            if (!db) return;
+            const backup = carregarBackupLocal();
+            if (backup.length === 0) return;
+
+            try {
+                const atuais = await listarPendentesIndexedDB();
+                const existentes = new Set();
+                atuais.forEach(item => {
+                    chavesComparacaoPendente(item).forEach(chave => existentes.add(chave));
+                });
+
+                let backupAlterado = false;
+                for (const item of backup) {
+                    if (!item.dados) continue;
+                    if (!item.dados.client_id) {
+                        item.dados.client_id = gerarClientId();
+                        backupAlterado = true;
+                    }
+                    const chaves = chavesComparacaoPendente(item);
+                    if (chaves.some(chave => existentes.has(chave))) continue;
+                    await salvarIndexedDB({ dados: item.dados, data: item.data || new Date().toISOString() });
+                    chaves.forEach(chave => existentes.add(chave));
+                }
+
+                if (backupAlterado) salvarBackupLocal(backup);
+            } catch (error) {
+                console.warn("Nao foi possivel restaurar o backup offline.", error);
+            }
         }
 
         function iniciarEnvio() {
@@ -493,41 +643,62 @@
         }
 
         function salvarOffline(dados) {
+            const data = new Date().toISOString();
+            const backupSalvo = salvarBackupPendente(dados, data);
+
             if (!db) {
-                alert("Armazenamento offline ainda carregando. Tente enviar novamente em alguns segundos.");
+                if (backupSalvo) {
+                    alert("Sem internet: cadastro salvo no backup offline deste aparelho. Sincronize quando tiver sinal.");
+                    limparFormulario();
+                } else {
+                    alert("Nao foi possivel salvar offline. Verifique o armazenamento do aparelho.");
+                }
                 finalizarEnvio();
                 return;
             }
 
-            const tx = db.transaction(STORE_NAME, "readwrite");
-            const store = tx.objectStore(STORE_NAME);
-            store.add({ dados: dados, data: new Date().toISOString() });
-            tx.oncomplete = function() {
+            salvarIndexedDB({ dados: dados, data: data })
+            .then(() => {
                 alert("Sem internet: cadastro salvo no aparelho. Sincronize quando tiver sinal.");
                 limparFormulario();
+            })
+            .catch(() => {
+                if (backupSalvo) {
+                    alert("Cadastro salvo no backup offline deste aparelho. Abra o app com internet depois para sincronizar.");
+                    limparFormulario();
+                } else {
+                    alert("Nao foi possivel salvar offline. Verifique o armazenamento do aparelho.");
+                }
+            })
+            .finally(() => {
                 finalizarEnvio();
-            };
-            tx.onerror = function() {
-                alert("Não foi possível salvar offline. Verifique o armazenamento do aparelho.");
-                finalizarEnvio();
-            };
+                verificarPendencias();
+            });
         }
 
-        function deletarPendente(id) {
+        function deletarPendente(item, removerPorFingerprint = false) {
             return new Promise((resolve, reject) => {
+                if (!db || item.id === undefined || item.id === null) {
+                    removerBackupPendente(item, removerPorFingerprint);
+                    resolve();
+                    return;
+                }
                 const txDel = db.transaction(STORE_NAME, "readwrite");
-                txDel.oncomplete = resolve;
+                txDel.oncomplete = () => {
+                    removerBackupPendente(item, removerPorFingerprint);
+                    resolve();
+                };
                 txDel.onerror = () => reject(txDel.error);
-                txDel.objectStore(STORE_NAME).delete(id);
+                txDel.objectStore(STORE_NAME).delete(item.id);
             });
         }
 
         async function sincronizar() {
             if (!navigator.onLine) {
-                alert("Você ainda está sem internet.");
+                alert("Voce ainda esta sem internet.");
                 return;
             }
-            if (!db) {
+            if (!db && carregarBackupLocal().length === 0) {
                 alert("Armazenamento offline ainda carregando. Tente novamente em alguns segundos.");
                 return;
             }
@@ -536,33 +707,47 @@
             btnSync.disabled = true;
             btnSync.innerText = "Sincronizando...";
 
-            const tx = db.transaction(STORE_NAME, "readonly");
-            const store = tx.objectStore(STORE_NAME);
-            const allRecords = store.getAll();
+            try {
+                await restaurarBackupOffline();
+                const registros = await listarPendentesIndexedDB();
+                const chavesRegistros = new Set();
+                registros.forEach(item => {
+                    chavesComparacaoPendente(item).forEach(chave => chavesRegistros.add(chave));
+                });
 
-            allRecords.onsuccess = async function() {
-                const registros = allRecords.result;
+                carregarBackupLocal().forEach(item => {
+                    const chaves = chavesComparacaoPendente(item);
+                    if (!chaves.some(chave => chavesRegistros.has(chave))) {
+                        registros.push(item);
+                        chaves.forEach(chave => chavesRegistros.add(chave));
+                    }
+                });
+
                 if (registros.length === 0) {
-                    alert("Tudo certo! Não há dados pendentes.");
-                    btnSync.disabled = false;
-                    btnSync.innerText = "Sincronizar dados pendentes";
+                    alert("Tudo certo! Nao ha dados pendentes.");
                     return;
                 }
 
                 let sucessos = 0;
                 let duplicadosLocais = 0;
+                let falhas = 0;
                 const vistos = new Set();
                 for (let item of registros) {
                     try {
                         const fingerprint = fingerprintPesquisa(item.dados);
-                        if (vistos.has(fingerprint)) {
-                            await deletarPendente(item.id);
+                        const chaves = chavesComparacaoPendente(item);
+                        if (vistos.has(`fp:${fingerprint}`) || chaves.some(chave => vistos.has(chave))) {
+                            await deletarPendente(item);
                             duplicadosLocais++;
                             continue;
                         }
-                        vistos.add(fingerprint);
+                        vistos.add(`fp:${fingerprint}`);
+                        chaves.forEach(chave => vistos.add(chave));
 
-                        if (!item.dados.client_id) item.dados.client_id = gerarClientId();
+                        if (!item.dados.client_id) {
+                            item.dados.client_id = gerarClientId();
+                            salvarBackupPendente(item.dados, item.data || new Date().toISOString());
+                        }
                         const response = await fetch("/coletar", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
@@ -570,34 +755,55 @@
                         });
                         const resultado = await response.json().catch(() => null);
                         if (!response.redirected && response.ok && resultado && resultado.status === "ok") {
-                            await deletarPendente(item.id);
+                            await deletarPendente(item, true);
                             sucessos++;
+                        } else {
+                            falhas++;
                         }
                     } catch (e) {
                         console.error(e);
+                        falhas++;
                     }
                 }
 
-                alert(`Sincronização concluída!\nEnviados: ${sucessos}\nDuplicados ignorados: ${duplicadosLocais}`);
+                let mensagem = `Sincronizacao concluida!\nEnviados: ${sucessos}\nDuplicados ignorados: ${duplicadosLocais}`;
+                if (falhas > 0) mensagem += `\nPendentes que ficaram no aparelho: ${falhas}`;
+                alert(mensagem);
+            } catch (error) {
+                console.error(error);
+                alert("Nao foi possivel sincronizar agora. Os dados pendentes continuam salvos no aparelho.");
+            } finally {
                 btnSync.disabled = false;
                 btnSync.innerText = "Sincronizar dados pendentes";
                 verificarPendencias();
-            };
+            }
+        }
+
+        function atualizarStatusPendencias(total) {
+            if (total > 0) {
+                statusBar.innerText = `Voce tem ${total} cadastro(s) pendente(s).`;
+                statusBar.className = "status-pendente";
+                statusBar.style.display = "block";
+            } else {
+                statusBar.className = "";
+                statusBar.style.display = "none";
+            }
         }
 
         function verificarPendencias() {
-            if (!db) return;
+            const backupCount = carregarBackupLocal().length;
+            if (!db) {
+                atualizarStatusPendencias(backupCount);
+                return;
+            }
             const tx = db.transaction(STORE_NAME, "readonly");
             const store = tx.objectStore(STORE_NAME);
             const countRequest = store.count();
             countRequest.onsuccess = function() {
-                if (countRequest.result > 0) {
-                    statusBar.innerText = `Você tem ${countRequest.result} cadastro(s) pendente(s).`;
-                    statusBar.className = "status-pendente";
-                } else {
-                    statusBar.className = "";
-                    statusBar.style.display = "none";
-                }
+                atualizarStatusPendencias(Math.max(countRequest.result, backupCount));
+            };
+            countRequest.onerror = function() {
+                atualizarStatusPendencias(backupCount);
             };
         }
 
@@ -612,7 +818,9 @@
             verificarPendencias();
         }
 
-        window.addEventListener('online', verificarPendencias);
+        window.addEventListener('online', () => {
+            restaurarBackupOffline().finally(verificarPendencias);
+        });
 
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/service-worker.js')

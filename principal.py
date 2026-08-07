@@ -17,7 +17,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.getenv("DB_PATH", os.path.join(BASE_DIR, "dados.db"))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
-APP_VERSION = "20260806-ocupacao-outra"
+APP_VERSION = "20260807-offline-backup"
 LIMITES_BRASIL = {
     "min_lat": -34,
     "max_lat": 6,

@@ -1,7 +1,7 @@
 {
   "name": "Pesquisa de Opinião Pública 2026",
   "short_name": "Pesquisa",
-  "start_url": "/static/index.html?v=20260806-ocupacao-outra",
+  "start_url": "/static/index.html?v=20260807-offline-backup",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#0f766e",

@@ -27,7 +27,7 @@
     }
   ],
   "vars": {
-    "APP_VERSION": "20260806-ocupacao-outra",
+    "APP_VERSION": "20260807-offline-backup",
     "EXIGIR_SENHA": "false",
     "SENHA_SISTEMA": "Lucasph12345"
   }
